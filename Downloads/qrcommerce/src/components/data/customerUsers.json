@@ -1,0 +1,11 @@
+{
+    "customerUsers": [
+      {"name":"u",
+      "email":"u",
+      "password":"u",
+      "userType":"customer"
+    }
+
+    ]
+  }
+  

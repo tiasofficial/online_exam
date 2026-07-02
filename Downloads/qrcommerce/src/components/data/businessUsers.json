@@ -1,0 +1,11 @@
+{
+    "businessUsers": [
+      {"name":"1",
+      "email":"1",
+      "password":"1",
+      "userType":"business"
+    }
+
+    ]
+  }
+  
