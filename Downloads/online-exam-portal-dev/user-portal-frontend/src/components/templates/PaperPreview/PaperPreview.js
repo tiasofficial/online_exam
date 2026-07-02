@@ -7,6 +7,12 @@ import Auth from '../../../helper/Auth';
 import { connect } from 'react-redux';
 import { setAlert } from '../../../redux/actions/alertAction';
 
+const getImageUrl = (path) => {
+  if (!path || path === 'null' || path === 'undefined') return '';
+  if (path.startsWith('http')) return path;
+  return `${apis.BASE}${path}`;
+};
+
 const useStyles = theme => ({
   root: {
     padding: theme.spacing(3),
@@ -194,7 +200,7 @@ class PaperPreview extends Component {
               
               <div style={{ margin: '10px 0' }}>
                 {q.body !== ' ' && <Typography>{q.body}</Typography>}
-                {q.bodyImage && q.bodyImage !== 'null' && q.bodyImage !== 'undefined' && q.bodyImage.trim() !== '' && <img src={`${apis.BASE}${q.bodyImage}`} alt="Q" style={{ maxHeight: '150px', marginTop: '10px' }} />}
+                {q.bodyImage && q.bodyImage.trim() !== '' && <img src={getImageUrl(q.bodyImage)} alt="Question Image" style={{ maxWidth: '100%', maxHeight: '200px' }} />}
               </div>
 
               <div style={{ marginLeft: '20px' }}>
@@ -203,8 +209,8 @@ class PaperPreview extends Component {
                     <Typography variant="body2" color={q.answer === String(optIndex + 1) ? 'primary' : 'textSecondary'}>
                       {optIndex + 1}. {opt !== ' ' ? opt : ''}
                     </Typography>
-                    {q.optionImages && q.optionImages[optIndex] && q.optionImages[optIndex] !== 'null' && q.optionImages[optIndex] !== 'undefined' && q.optionImages[optIndex].trim() !== '' && (
-                      <img src={`${apis.BASE}${q.optionImages[optIndex]}`} alt="opt" style={{ maxHeight: '50px' }} />
+                    {q.optionImages && q.optionImages[optIndex] && q.optionImages[optIndex].trim() !== '' && (
+                      <img src={getImageUrl(q.optionImages[optIndex])} alt={`Option ${optIndex + 1}`} style={{ maxWidth: '150px', maxHeight: '100px', marginLeft: q.options[optIndex] !== ' ' ? '10px' : '0' }} />
                     )}
                   </div>
                 ))}

@@ -5,6 +5,12 @@ import { getQuestionAnswerActionStudent } from "../../../redux/actions/studentTe
 import { TableContainer, Table, Paper }  from "@material-ui/core";
 import apis from '../../../helper/Apis';
 
+const getImageUrl = (path) => {
+  if (!path || path === 'null' || path === 'undefined') return '';
+  if (path.startsWith('http')) return path;
+  return `${apis.BASE}${path}`;
+};
+
 const useStyles = (theme) => ({
   tableBorder:{
     background:'#e7e7e7',
@@ -97,7 +103,7 @@ class TestResultViewQuestions extends React.Component {
                 <span className={this.props.classes.tbody}>{r.body}</span>
                 {r.bodyImage && r.bodyImage !== 'null' && r.bodyImage !== 'undefined' && String(r.bodyImage).trim() !== '' && (
                   <div style={{ marginTop: '5px' }}>
-                    <img src={`${apis.BASE}${r.bodyImage}`} alt="question" style={{ maxHeight: '150px', maxWidth: '100%' }} />
+                    <img src={getImageUrl(r.bodyImage)} alt="question" style={{ maxHeight: '150px', maxWidth: '100%' }} />
                   </div>
                 )}
               </div>
@@ -109,7 +115,7 @@ class TestResultViewQuestions extends React.Component {
                   <span key={optIndex} className={r.answer===r.options[optIndex]?this.props.classes.tcorrect : this.props.classes.toption} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                     {r.options[optIndex] !== ' ' ? r.options[optIndex] : ''}
                     {r.optionImages && r.optionImages[optIndex] && r.optionImages[optIndex] !== 'null' && r.optionImages[optIndex] !== 'undefined' && String(r.optionImages[optIndex]).trim() !== '' && (
-                      <img src={`${apis.BASE}${r.optionImages[optIndex]}`} alt="option" style={{ maxHeight: '40px' }} />
+                      <img src={getImageUrl(r.optionImages[optIndex])} alt="option" style={{ maxHeight: '40px' }} />
                     )}
                   </span>
                 ))}

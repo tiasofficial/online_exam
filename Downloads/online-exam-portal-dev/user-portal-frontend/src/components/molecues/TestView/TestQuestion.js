@@ -5,6 +5,12 @@ import { FormControl, FormControlLabel, FormLabel, RadioGroup, Radio } from "@ma
 import { selectedOptionAction } from "../../../redux/actions/takeTestAction";
 import apis from "../../../helper/Apis";
 
+const getImageUrl = (path) => {
+  if (!path || path === 'null' || path === 'undefined') return '';
+  if (path.startsWith('http')) return path;
+  return `${apis.BASE}${path}`;
+};
+
 
 const useStyles = (theme) => ({
   quebody : {
@@ -39,14 +45,14 @@ class TestQuestion extends React.Component {
       const renderLabel = (text, imgUrl) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {text !== ' ' && <span>{text}</span>}
-          {imgUrl && imgUrl !== 'null' && <img src={`${apis.BASE}${imgUrl}`} alt="option" style={{ maxHeight: '100px' }} />}
+          {imgUrl && imgUrl !== 'null' && <img src={getImageUrl(imgUrl)} alt="option" style={{ maxHeight: '100px' }} />}
         </div>
       );
 
       return(<div className={this.props.classes.main}>
         <div className={this.props.classes.quebody}>
           {que.body !== ' ' && <p>{que.body}</p>}
-          {que.bodyImage && que.bodyImage !== 'null' && <img src={`${apis.BASE}${que.bodyImage}`} alt="question" style={{ maxWidth: '100%', maxHeight: '300px' }} />}
+          {que.bodyImage && <img src={getImageUrl(que.bodyImage)} alt="Question Image" style={{ maxWidth: '100%', maxHeight: '200px' }} />}
         </div>
         <FormControl component="fieldset" className={this.props.classes.options}>
           <FormLabel component="legend" >Select Answer</FormLabel>
