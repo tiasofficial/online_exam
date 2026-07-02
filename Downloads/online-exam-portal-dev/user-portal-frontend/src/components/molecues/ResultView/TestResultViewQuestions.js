@@ -95,7 +95,7 @@ class TestResultViewQuestions extends React.Component {
               :
               <div style={{ display: 'inline-block', verticalAlign: 'top', margin: '2px' }}>
                 <span className={this.props.classes.tbody}>{r.body}</span>
-                {r.bodyImage && r.bodyImage !== 'null' && r.bodyImage.trim() !== '' && (
+                {r.bodyImage && r.bodyImage !== 'null' && r.bodyImage !== 'undefined' && String(r.bodyImage).trim() !== '' && (
                   <div style={{ marginTop: '5px' }}>
                     <img src={`${apis.BASE}${r.bodyImage}`} alt="question" style={{ maxHeight: '150px', maxWidth: '100%' }} />
                   </div>
@@ -108,7 +108,7 @@ class TestResultViewQuestions extends React.Component {
                 {[0, 1, 2, 3].map(optIndex => (
                   <span key={optIndex} className={r.answer===r.options[optIndex]?this.props.classes.tcorrect : this.props.classes.toption} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                     {r.options[optIndex] !== ' ' ? r.options[optIndex] : ''}
-                    {r.optionImages && r.optionImages[optIndex] && r.optionImages[optIndex] !== 'null' && r.optionImages[optIndex].trim() !== '' && (
+                    {r.optionImages && r.optionImages[optIndex] && r.optionImages[optIndex] !== 'null' && r.optionImages[optIndex] !== 'undefined' && String(r.optionImages[optIndex]).trim() !== '' && (
                       <img src={`${apis.BASE}${r.optionImages[optIndex]}`} alt="option" style={{ maxHeight: '40px' }} />
                     )}
                   </span>
