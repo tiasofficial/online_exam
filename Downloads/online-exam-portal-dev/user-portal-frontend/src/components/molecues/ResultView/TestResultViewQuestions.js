@@ -3,6 +3,7 @@ import React from "react";
 import { connect } from "react-redux";
 import { getQuestionAnswerActionStudent } from "../../../redux/actions/studentTestAction";
 import { TableContainer, Table, Paper }  from "@material-ui/core";
+import apis from '../../../helper/Apis';
 
 const useStyles = (theme) => ({
   tableBorder:{
@@ -92,15 +93,26 @@ class TestResultViewQuestions extends React.Component {
             <TableCell className={this.props.classes.tablecell}>
               <span className={this.props.classes.tkey}>Question</span>
               :
-              <span className={this.props.classes.tbody}>{r.body}</span>
+              <div style={{ display: 'inline-block', verticalAlign: 'top', margin: '2px' }}>
+                <span className={this.props.classes.tbody}>{r.body}</span>
+                {r.bodyImage && r.bodyImage !== 'null' && r.bodyImage.trim() !== '' && (
+                  <div style={{ marginTop: '5px' }}>
+                    <img src={`${apis.BASE}${r.bodyImage}`} alt="question" style={{ maxHeight: '150px', maxWidth: '100%' }} />
+                  </div>
+                )}
+              </div>
               <br/>
               <span className={this.props.classes.tkey}>Options </span>
               :
               <span style={{'display':'inline-block','margin':'2px'}}>
-                <span className={r.answer===r.options[0]?this.props.classes.tcorrect : this.props.classes.toption}>{r.options[0]}</span>
-                <span className={r.answer===r.options[1]?this.props.classes.tcorrect : this.props.classes.toption}>{r.options[1]}</span>
-                <span className={r.answer===r.options[2]?this.props.classes.tcorrect : this.props.classes.toption}>{r.options[2]}</span>
-                <span className={r.answer===r.options[3]?this.props.classes.tcorrect : this.props.classes.toption}>{r.options[3]}</span>
+                {[0, 1, 2, 3].map(optIndex => (
+                  <span key={optIndex} className={r.answer===r.options[optIndex]?this.props.classes.tcorrect : this.props.classes.toption} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    {r.options[optIndex] !== ' ' ? r.options[optIndex] : ''}
+                    {r.optionImages && r.optionImages[optIndex] && r.optionImages[optIndex] !== 'null' && r.optionImages[optIndex].trim() !== '' && (
+                      <img src={`${apis.BASE}${r.optionImages[optIndex]}`} alt="option" style={{ maxHeight: '40px' }} />
+                    )}
+                  </span>
+                ))}
               </span>
               <br/>
               <span className={this.props.classes.tkey}>Marks </span>
@@ -115,14 +127,10 @@ class TestResultViewQuestions extends React.Component {
               :
               <span className={this.props.classes.tcorrect}>{r.answer}</span> 
               <br/>
-              {r.explanation && r.explanation.trim() !== '' && (
-                <React.Fragment>
-                  <span className={this.props.classes.tkey}>Explanation </span>
-                  :
-                  <span className={this.props.classes.tbody}>{r.explanation}</span> 
-                  <br/>
-                </React.Fragment>
-              )}
+              <span className={this.props.classes.tkey}>Explanation </span>
+              :
+              <span className={this.props.classes.tbody}>{r.explanation && r.explanation.trim() !== '' ? r.explanation : 'None'}</span> 
+              <br/>
             </TableCell>
             </TableRow>
           ))}
