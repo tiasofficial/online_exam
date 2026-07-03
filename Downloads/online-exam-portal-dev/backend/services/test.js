@@ -2,7 +2,7 @@ var testModel = require('../models/test');
 var questionModel = require('../models/question');
 const testRegistrationModel = require('../models/testRegistration');
 const classModel = require('../models/class');
-const { uploadFile } = require('./firebase');
+const { uploadFile } = require('./cloudinary');
 
 var getTestStatus = (test) => {
   if(test.status === 'CANCELLED')
