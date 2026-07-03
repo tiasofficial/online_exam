@@ -86,49 +86,47 @@ class TeacherHomepage extends React.Component{
     return(
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1 }}>
-        <div>
-          <AppBar
-            elevation={0}
-            className={this.props.classes.appbar}
-          >
-            <Toolbar>
-                  <Typography variant='h5' className={this.props.classes.title}>
-                    Teacher Homepage
-                  </Typography>
-                  <Typography variant='h6'>
-                    welcome, {this.props.user.userDetails.username} !!
-                  </Typography>
-            </Toolbar>
-          </AppBar>
-          <div className={this.props.classes.addHeight}></div>
-        </div>
-        <div className={this.props.classes.flex}>
-          <Drawer
-            className={this.props.classes.drawer}
-            variant="permanent"
-            anchor="left"
-            classes= { {paper:this.props.classes.drawerPaper}}
-          >
-            <List>
-              {this.state.menuList.map((item,index)=>(
-                <ListItem button key={index} onClick={()=>(this.onMenuItemClick(item.content))}>
-                  <ListItemText primary={item.title}/>
-                </ListItem>
-              ))}
-              <ListItem>
-              <LogoutButton/>
-              </ListItem>
-            </List>
-          </Drawer>
-          <div className={this.props.classes.content}>
-            
-            <AlertBox></AlertBox>
-            {this.state.content}
-            
+          <div>
+            <AppBar
+              elevation={0}
+              className={this.props.classes.appbar}
+            >
+              <Toolbar>
+                    <Typography variant='h5' className={this.props.classes.title}>
+                      Teacher Homepage
+                    </Typography>
+                    <Typography variant='h6'>
+                      welcome, {this.props.user.userDetails.username} !!
+                    </Typography>
+              </Toolbar>
+            </AppBar>
+            <div className={this.props.classes.addHeight}></div>
           </div>
-        </div>
-        
-      </div>
+          <div className={this.props.classes.flex}>
+            <Drawer
+              className={this.props.classes.drawer}
+              variant="permanent"
+              anchor="left"
+              classes= { {paper:this.props.classes.drawerPaper}}
+            >
+              <List>
+                {this.state.menuList.map((item,index)=>(
+                  <ListItem button key={index} onClick={()=>(this.onMenuItemClick(item.content))}>
+                    <ListItemText primary={item.title}/>
+                  </ListItem>
+                ))}
+                <ListItem>
+                <LogoutButton/>
+                </ListItem>
+              </List>
+            </Drawer>
+            <div className={this.props.classes.content}>
+              
+              <AlertBox></AlertBox>
+              {this.state.content}
+              
+            </div>
+          </div>
         </div>
         <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6', zIndex: 1201, position: 'relative' }}>
           Designed and developed by <a href="https://www.tiastech.in/" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'none', color: '#007bff'}}>TIAS</a>
