@@ -57,12 +57,9 @@ class LoginPage extends React.Component {
             elevation={0}
             className={this.props.classes.appbar}
             >
-              <Toolbar>
-                    <Typography variant='h5' className={this.props.classes.title}>
-                      Login 
-                    </Typography>
-                    <Typography variant='h6'>
-                      <Button variant="contained" className={this.props.classes.endtestbtn} onClick={()=>(this.onStudentRegisterClick())}>Student Register</Button>
+              <Toolbar style={{ display: 'flex', justifyContent: 'center' }}>
+                    <Typography variant='h5' style={{ fontWeight: 'bold' }}>
+                      ONLINE EXAMINATION PORTAL
                     </Typography>
               </Toolbar>
             </AppBar>
