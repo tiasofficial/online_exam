@@ -11,6 +11,8 @@ import { getAllClasses } from "../../../redux/actions/classAction";
 import { Select, MenuItem, InputLabel, FormControl } from "@material-ui/core";
 import PaperSetup from "../PaperSetup/PaperSetup";
 import PaperPreview from "../PaperPreview/PaperPreview";
+import { MuiPickersUtilsProvider, DateTimePicker } from '@material-ui/pickers';
+import DateFnsUtils from '@date-io/date-fns';
 
 const useStyles = ()=>({
   questionInput:{
@@ -57,12 +59,12 @@ class CreateTestForm extends React.Component {
       subjects : [],
       maxmarks : 30,
       queTypes : [],
-      startTime: "",
-      endTime : "",
+      startTime: null,
+      endTime : null,
       duration : 30,
-      regStartTime : "",
-      regEndTime : "",
-      resultTime : "",
+      regStartTime : null,
+      regEndTime : null,
+      resultTime : null,
       targetClass: "",
       assignedStudents: [],
       createdTestId: null,
@@ -155,17 +157,17 @@ class CreateTestForm extends React.Component {
     })
   }
 
-  startTimeInputHandler = (event) => {
+  startTimeInputHandler = (date) => {
     this.setState({
       ...this.state,
-      startTime : event.target.value
+      startTime : date
     })
   }
 
-  endTimeInputHandler = (event) => {
+  endTimeInputHandler = (date) => {
     this.setState({
       ...this.state,
-      endTime : event.target.value
+      endTime : date
     })
   }
 
@@ -176,24 +178,24 @@ class CreateTestForm extends React.Component {
     })
   }
 
-  regStartTimeInputHandler = (event) => {
+  regStartTimeInputHandler = (date) => {
     this.setState({
       ...this.state,
-      regStartTime : event.target.value
+      regStartTime : date
     })
   }
 
-  regEndTimeInputHandler = (event) => {
+  regEndTimeInputHandler = (date) => {
     this.setState({
       ...this.state,
-      regEndTime : event.target.value
+      regEndTime : date
     })
   }
 
-  resultTimeInputHandler = (event) => {
+  resultTimeInputHandler = (date) => {
     this.setState({
       ...this.state,
-      resultTime : event.target.value
+      resultTime : date
     })
   }
 
@@ -212,15 +214,17 @@ class CreateTestForm extends React.Component {
     var dur = parseInt(this.state.duration) * 60 * 1000;
     if(this.state.subjects.length<1) {
       this.sendAlert('error','Invalid input','select at least one subject');
-    } else if(this.state.regStartTime && this.state.regEndTime && Date.parse(this.state.regStartTime) >= Date.parse(this.state.regEndTime)) {
+    } else if(!this.state.startTime || !this.state.endTime || !this.state.resultTime) {
+      this.sendAlert('error','Invalid input','Please fill in all required times (Start, End, Result)');
+    } else if(this.state.regStartTime && this.state.regEndTime && this.state.regStartTime.getTime() >= this.state.regEndTime.getTime()) {
       this.sendAlert('error','Invalid input','Invalid Registration start and end time');
-    } else if(Date.parse(this.state.startTime) >= Date.parse(this.state.endTime)) {
+    } else if(this.state.startTime && this.state.endTime && this.state.startTime.getTime() >= this.state.endTime.getTime()) {
       this.sendAlert('error','Invalid input','Invalid Test start and end time');
-    } else if(this.state.regEndTime && Date.parse(this.state.regEndTime) >= Date.parse(this.state.startTime)) {
+    } else if(this.state.regEndTime && this.state.startTime && this.state.regEndTime.getTime() >= this.state.startTime.getTime()) {
       this.sendAlert('error','Invalid input','Invalid Test start time');
-    } else if(Date.parse(this.state.endTime) >= Date.parse(this.state.resultTime)) {
+    } else if(this.state.endTime && this.state.resultTime && this.state.endTime.getTime() >= this.state.resultTime.getTime()) {
       this.sendAlert('error','Invalid input','Invalid Test result time');
-    } else if((Date.parse(this.state.endTime) - Date.parse(this.state.startTime) - dur) <= 0) {
+    } else if(this.state.endTime && this.state.startTime && (this.state.endTime.getTime() - this.state.startTime.getTime() - dur) <= 0) {
       this.sendAlert('error','Invalid input','Invalid Test duration time');
     } else if(!this.state.targetClass) {
       this.sendAlert('error','Invalid input','select a target class');
@@ -246,8 +250,9 @@ class CreateTestForm extends React.Component {
       return (<div></div>);
     }
     return(
+      <MuiPickersUtilsProvider utils={DateFnsUtils}>
       <form className={this.props.classes.formClass} onSubmit={(event)=>(this.handleSubmit(event))}>
-        <div className={this.props.classes.formTitle} color="primary">Create Test</div>
+        <div className={this.props.classes.formTitle}>Create Test</div>
         <TextField
           variant='outlined'
           color="primary"
@@ -306,61 +311,45 @@ class CreateTestForm extends React.Component {
           );
         })()}
         <br/>
-        <TextField
-          variant='outlined'
+        <DateTimePicker
+          inputVariant='outlined'
           color="primary"
           className={this.props.classes.optionInput}
           label="Registration Start Time"
-          type='datetime-local'
-          error_text=''
+          format="dd/MM/yyyy hh:mm a"
           value={this.state.regStartTime}
-          onChange={(event)=>(this.regStartTimeInputHandler(event))}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          onChange={(date)=>(this.regStartTimeInputHandler(date))}
+          clearable
         />
-        <TextField
-          variant='outlined'
+        <DateTimePicker
+          inputVariant='outlined'
           color="primary"
           className={this.props.classes.optionInput}
           label="Registration End Time"
-          type='datetime-local'
-          error_text=''
+          format="dd/MM/yyyy hh:mm a"
           value={this.state.regEndTime}
-          onChange={(event)=>(this.regEndTimeInputHandler(event))}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          onChange={(date)=>(this.regEndTimeInputHandler(date))}
+          clearable
         />
         <br/>
-        <TextField
-          variant='outlined'
+        <DateTimePicker
+          inputVariant='outlined'
           color="primary"
           className={this.props.classes.optionInput}
-          label="Start Time"
-          type='datetime-local'
-          error_text=''
+          label="Start Time *"
+          format="dd/MM/yyyy hh:mm a"
           value={this.state.startTime}
-          onChange={(event)=>(this.startTimeInputHandler(event))}
-          required
-          InputLabelProps={{
-            shrink: true,
-          }}
+          onChange={(date)=>(this.startTimeInputHandler(date))}
         />
         
-        <TextField
-          variant='outlined'
+        <DateTimePicker
+          inputVariant='outlined'
           color="primary"
           className={this.props.classes.optionInput}
-          label="End Time"
-          type='datetime-local'
-          error_text=''
+          label="End Time *"
+          format="dd/MM/yyyy hh:mm a"
           value={this.state.endTime}
-          onChange={(event)=>(this.endTimeInputHandler(event))}
-          required
-          InputLabelProps={{
-            shrink: true,
-          }}
+          onChange={(date)=>(this.endTimeInputHandler(date))}
         />
         <TextField
           variant='outlined'
@@ -378,19 +367,14 @@ class CreateTestForm extends React.Component {
           }}
         />
         <br/>
-        <TextField
-          variant='outlined'
+        <DateTimePicker
+          inputVariant='outlined'
           color="primary"
           className={this.props.classes.optionInput}
-          label="Result Time"
-          type='datetime-local'
-          error_text=''
+          label="Result Time *"
+          format="dd/MM/yyyy hh:mm a"
           value={this.state.resultTime}
-          onChange={(event)=>(this.resultTimeInputHandler(event))}
-          required
-          InputLabelProps={{
-            shrink: true,
-          }}
+          onChange={(date)=>(this.resultTimeInputHandler(date))}
         />
         <br/>
         <Button 
@@ -403,6 +387,7 @@ class CreateTestForm extends React.Component {
           {this.state.isSubmitting ? 'Creating...' : 'Create test'}
         </Button>
       </form>
+      </MuiPickersUtilsProvider>
     )
   }
 }
