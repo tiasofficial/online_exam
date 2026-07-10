@@ -1,0 +1,9 @@
+{
+  "mongodb": {
+    "connectionString": "mongodb://admin:dBpassword@mongodb:27017/online-exam-portal",
+    "authDB":"admin"
+  },
+  "jwt": {
+      "secret" : "mysecret"
+  }
+}

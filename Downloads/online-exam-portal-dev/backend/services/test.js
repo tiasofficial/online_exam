@@ -106,6 +106,9 @@ var createTest = async (req,res,next) => {
     targetSubject : req.body.targetSubject,
     createdBy : creator._id
   })
+  if (creator.organizationId) {
+    tempdata.organizationId = creator.organizationId;
+  }
   tempdata.save(async (err, savedTest)=>{
     if (err){
       console.log(err);
@@ -159,7 +162,9 @@ var getAllTest = (req,res,next) => {
   }
 
   try {
-    testModel.find().sort({startTime:-1})
+    var orgId = req.user && req.user.usertype === 'TEACHER' ? (req.user.organizationId || null) : null;
+    var query = req.user && req.user.usertype === 'TEACHER' ? { organizationId: orgId } : {};
+    testModel.find(query).sort({startTime:-1})
     .then((result)=>{
       for(x in result) {
         var correctStatus = getTestStatus(result[x]);
@@ -269,7 +274,7 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   var studentClasses = await classModel.find({ students: creator._id }, { _id: 1 });
   var classIds = studentClasses.map(c => c._id);
 
-  var tests = await testModel.find({ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
+  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -332,7 +337,7 @@ var getUpcomingTestforStudent = async(req,res,next) => {
   var studentClasses = await classModel.find({ students: creator._id }, { _id: 1 });
   var classIds = studentClasses.map(c => c._id);
 
-  var tests = await testModel.find({ endTime:{$gt:Date.now()}, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
+  var tests = await testModel.find({ organizationId: creator.organizationId, endTime:{$gt:Date.now()}, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -687,13 +692,40 @@ var editExamQuestion = async (req, res, next) => {
 
     let diffMarks = parseInt(marks) - question.marks;
     
+    if (!question.optionImages || question.optionImages.length < 4) {
+      question.optionImages = [
+        question.optionImages?.[0] || '', 
+        question.optionImages?.[1] || '', 
+        question.optionImages?.[2] || '', 
+        question.optionImages?.[3] || ''
+      ];
+    }
+
     // Process uploaded images
     if (req.files) {
-      if (req.files['bodyImage']) question.bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
-      if (req.files['optImg1']) question.optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
-      if (req.files['optImg2']) question.optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
-      if (req.files['optImg3']) question.optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
-      if (req.files['optImg4']) question.optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+      let imagesModified = false;
+      if (req.files['bodyImage']) {
+        question.bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+      }
+      if (req.files['optImg1']) {
+        question.optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
+        imagesModified = true;
+      }
+      if (req.files['optImg2']) {
+        question.optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
+        imagesModified = true;
+      }
+      if (req.files['optImg3']) {
+        question.optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
+        imagesModified = true;
+      }
+      if (req.files['optImg4']) {
+        question.optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+        imagesModified = true;
+      }
+      if (imagesModified) {
+        question.markModified('optionImages');
+      }
     }
 
     question.body = body || ' ';

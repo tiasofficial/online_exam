@@ -60,23 +60,6 @@ const useStyles = ()=>({
   }
 })
 
-const getSecondToStr = (sec) => {
-  var h = parseInt(sec/3600);
-  var m = parseInt((sec%3600)/60);
-  var str = "";
-  if(h<10) {
-    str += "0"+h+":";
-  } else {
-    str += h+":";
-  }
-  if(m<10) {
-    str+= "0"+m;
-  } else {
-    str += m;
-  }
-  return str;
-}
-
 class ViewTest extends React.Component {
   constructor(props) {
     super(props);

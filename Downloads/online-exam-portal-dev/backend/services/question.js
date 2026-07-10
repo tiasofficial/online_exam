@@ -47,7 +47,8 @@ var addQuestion = (req,res,next)=>{
             marks : req.body.marks,
             answer : req.body.answer,
             status : true,
-            createdBy : creator._id
+            createdBy : creator._id,
+            organizationId : creator.organizationId
           })
           tempdata.save((err, que)=>{
             if (err){
@@ -98,7 +99,7 @@ var searchQuestion = (req,res,next)=>{
     })
   }
   else {
-    questionModel.find({body : new RegExp(req.body.query)}).limit(20).then((questions)=>{
+    questionModel.find({organizationId: creator.organizationId, body : new RegExp(req.body.query)}).limit(20).then((questions)=>{
       result = questions.map((que)=>({_id:que._id,body:que.body,status:que.status}));
       res.json({
         success : true,

@@ -47,6 +47,7 @@ router.post('/assignStudentsToTest',testService.assignStudentsToTest);
 router.post('/getAssignedStudents',testService.getAssignedStudents);
 router.post('/getTestQuestionsForTeacher',testService.getTestQuestionsForTeacher);
 router.post('/getTestResultsForTeacher',resultService.getTestResultsForTeacher);
+router.post('/getStudentResultDetailsForTeacher',resultService.getStudentResultDetailsForTeacher);
 const studentService = require('../services/student');
 router.get('/getAllStudentsForTeacher', studentService.getAllStudents);
 router.post('/createStudent', studentService.createStudent);

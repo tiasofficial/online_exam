@@ -200,7 +200,7 @@ class PaperPreview extends Component {
               
               <div style={{ margin: '10px 0' }}>
                 {q.body !== ' ' && <Typography>{q.body}</Typography>}
-                {q.bodyImage && q.bodyImage.trim() !== '' && <img src={getImageUrl(q.bodyImage)} alt="Question Image" style={{ maxWidth: '100%', maxHeight: '200px' }} />}
+                {q.bodyImage && q.bodyImage.trim() !== '' && <img src={getImageUrl(q.bodyImage)} alt="Question" style={{ maxWidth: '100%', maxHeight: '200px' }} />}
               </div>
 
               <div style={{ marginLeft: '20px' }}>
