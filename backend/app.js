@@ -23,8 +23,8 @@ app.use(function(req, res, next) {
 
 const corsOptions = {
     origin: [
-      'https://exam-portal-admin-tias.vercel.app', 
-      'https://exam-portal-users.vercel.app',
+      'https://online-exam-jb3t-lac.vercel.app', 
+      'https://online-exam-lake.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001'
     ]
