@@ -1,0 +1,12 @@
+{
+    "mongodb": {
+        "connectionString": "MONGO_URI"
+    },
+    "jwt": {
+        "secret": "JWT_SECRET"
+    },
+    "mail-credentials": {
+        "userid": "MAIL_USERID",
+        "password": "MAIL_PASSWORD"
+    }
+}

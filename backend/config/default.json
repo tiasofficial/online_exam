@@ -1,0 +1,12 @@
+{
+    "mongodb": {
+        "connectionString": "mongodb://localhost:27017/online-exam-portal"
+    },
+    "jwt": {
+        "secret" : "replace_this_secret_in_production"
+    },
+    "mail-credentials" : {
+        "userid" :"<smtp server userId>",
+        "password" : "<smtp server password>"
+    }
+}
