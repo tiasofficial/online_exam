@@ -53,15 +53,15 @@ class PaperSetup extends Component {
     this.state = {
       body: '',
       bodyImage: null,
-      option1: '',
+      option1: ' ',
       optImg1: null,
-      option2: '',
+      option2: '  ',
       optImg2: null,
-      option3: '',
+      option3: '   ',
       optImg3: null,
-      option4: '',
+      option4: '    ',
       optImg4: null,
-      answer: '1',
+      answer: ' ',
       questionType: 'SINGLE',
       marks: 1,
       explanation: '',
@@ -142,11 +142,11 @@ class PaperSetup extends Component {
         // Reset form
         this.setState({
           body: '', bodyImage: null,
-          option1: '', optImg1: null,
-          option2: '', optImg2: null,
-          option3: '', optImg3: null,
-          option4: '', optImg4: null,
-          answer: '1', questionType: 'SINGLE', marks: 1,
+          option1: ' ', optImg1: null,
+          option2: '  ', optImg2: null,
+          option3: '   ', optImg3: null,
+          option4: '    ', optImg4: null,
+          answer: ' ', questionType: 'SINGLE', marks: 1,
           explanation: '',
           fileInputKey: Date.now()
         });
@@ -219,10 +219,10 @@ class PaperSetup extends Component {
             <FormControl variant="outlined" margin="normal" fullWidth>
               <InputLabel>Correct Answer</InputLabel>
               <Select name="answer" value={this.state.answer} onChange={this.handleInputChange} label="Correct Answer">
-                <MenuItem value="1">Option 1</MenuItem>
-                <MenuItem value="2">Option 2</MenuItem>
-                <MenuItem value="3">Option 3</MenuItem>
-                <MenuItem value="4">Option 4</MenuItem>
+                <MenuItem value={this.state.option1}>Option 1</MenuItem>
+                <MenuItem value={this.state.option2}>Option 2</MenuItem>
+                <MenuItem value={this.state.option3}>Option 3</MenuItem>
+                <MenuItem value={this.state.option4}>Option 4</MenuItem>
               </Select>
             </FormControl>
           )}
