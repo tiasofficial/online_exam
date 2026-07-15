@@ -2,6 +2,7 @@ import React from "react";
 import TextField from "@material-ui/core/TextField";
 import './loginForm.css';
 import Button from "@material-ui/core/Button";
+import CircularProgress from '@material-ui/core/CircularProgress';
 import { withStyles } from "@material-ui/core/styles";
 import { loginRequestAction } from "../../../redux/actions/loginAction";
 import { connect } from "react-redux";
@@ -21,7 +22,8 @@ class LoginForm extends React.Component {
     super(props);
     this.state = {
       email : "",
-      password : ""
+      password : "",
+      isLoading: false
     }
   } 
 
@@ -39,14 +41,16 @@ class LoginForm extends React.Component {
     });
   }
 
-  handleSubmit(event) {
+  handleSubmit = async (event) => {
     event.preventDefault();
-    this.props.loginRequestAction(this.state);
+    this.setState({ ...this.state, isLoading: true });
+    await this.props.loginRequestAction(this.state);
+    this.setState({ ...this.state, isLoading: false });
   }
 
   render() {
     return (
-      <form className="form-class" onSubmit={(event)=>(this.handleSubmit(event))}>
+      <form className="form-class" onSubmit={this.handleSubmit}>
         <div className="form-title" color="primary">LOGIN</div>
         <TextField
           variant='outlined'
@@ -57,7 +61,7 @@ class LoginForm extends React.Component {
           type='email'
           error_text=''
           value={this.state.email}
-          onChange={(event)=>(this.emailInputHandler(event))}
+          onChange={this.emailInputHandler}
           required
         />
         <TextField
@@ -69,7 +73,7 @@ class LoginForm extends React.Component {
           type='password'
           error_text=''
           value={this.state.password}
-          onChange={(event)=>(this.passwordInputHandler(event))}
+          onChange={this.passwordInputHandler}
           required
         />
         <Button 
@@ -77,8 +81,9 @@ class LoginForm extends React.Component {
           color="primary"
           type='submit'
           className={this.props.classes.loginbtn}
+          disabled={this.state.isLoading}
         >
-          Login
+          {this.state.isLoading ? <CircularProgress size={24} /> : "Login"}
         </Button>
       </form>
     )
