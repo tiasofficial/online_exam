@@ -117,7 +117,11 @@ class TestTable extends React.Component {
                return ans;
             }
 
-            let correctAnswer = formatAnswer(q.answer);
+            let correctAnswerRaw = q.answer;
+            if (q.questionType === 'MULTIPLE' && typeof correctAnswerRaw === 'string') {
+               correctAnswerRaw = correctAnswerRaw.split(',');
+            }
+            let correctAnswer = formatAnswer(correctAnswerRaw);
             let studentAnswer = data.answers && data.answers[index] ? formatAnswer(data.answers[index]) : "Not Answered";
             let bodyText = q.body || '';
             if (bodyText.length > 50) bodyText = bodyText.substring(0, 50) + "...";
