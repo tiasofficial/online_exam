@@ -36,7 +36,13 @@ router.post('/createSubject',subjectService.createSubject);
 router.post('/updateSubject',subjectService.updateSubject);
 router.post('/deleteSubject',subjectService.deleteSubject);
 router.post('/searchQuestion',questionService.searchQuestion);
-router.post('/updateQuestion',questionService.updateQuestion);
+router.post('/updateQuestion', upload.fields([
+  { name: 'bodyImage', maxCount: 1 },
+  { name: 'optImg1', maxCount: 1 },
+  { name: 'optImg2', maxCount: 1 },
+  { name: 'optImg3', maxCount: 1 },
+  { name: 'optImg4', maxCount: 1 }
+]), questionService.updateQuestion);
 router.post('/getQuestion',questionService.getQuestionById);
 router.post('/changeQuestionStatus',questionService.changeQuestionStatus);
 router.post('/getAnswer',questionService.getAnsByQuestionId);
