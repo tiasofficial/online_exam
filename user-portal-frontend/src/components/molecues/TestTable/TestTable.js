@@ -105,8 +105,20 @@ class TestTable extends React.Component {
         if (data.questions && Array.isArray(data.questions)) {
           data.questions.forEach((q, index) => {
             if (!q) return; // Skip if question data is missing
-            let correctAnswer = q.answer;
-            let studentAnswer = data.answers && data.answers[index] ? data.answers[index] : "Not Answered";
+            
+            const formatAnswer = (ans) => {
+               if(Array.isArray(ans)) return ans.map(a => formatAnswer(a)).join(', ');
+               if(!ans) return ans;
+               if(typeof ans === 'string' && ans.trim() === '') {
+                 let idx = q.options ? q.options.indexOf(ans) : -1;
+                 if(idx !== -1) return `Option ${String.fromCharCode(65 + idx)} [Image]`;
+                 return '[Image Option]';
+               }
+               return ans;
+            }
+
+            let correctAnswer = formatAnswer(q.answer);
+            let studentAnswer = data.answers && data.answers[index] ? formatAnswer(data.answers[index]) : "Not Answered";
             let bodyText = q.body || '';
             if (bodyText.length > 50) bodyText = bodyText.substring(0, 50) + "...";
             tableRows.push([
