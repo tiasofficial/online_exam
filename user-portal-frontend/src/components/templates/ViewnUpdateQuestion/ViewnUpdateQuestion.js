@@ -62,8 +62,20 @@ class ViewnUpdateQuestion extends React.Component {
       questionType: this.props.question.questionType || 'SINGLE',
       answer : this.props.question.answer === '' ? 'None' : this.props.question.answer,
       marks : this.props.question.marks,
-      explanation : this.props.question.explanation
+      explanation : this.props.question.explanation,
+      bodyImage: null,
+      optImg1: null,
+      optImg2: null,
+      optImg3: null,
+      optImg4: null
     }
+  }
+
+  handleFileChange = (event) => {
+    this.setState({
+      ...this.state,
+      [event.target.name]: event.target.files[0]
+    });
   }
 
   bodyInputHandler = (event) => {
@@ -133,14 +145,42 @@ class ViewnUpdateQuestion extends React.Component {
       return;
     }
     
+    let opt1 = this.state.options[0]; if (!opt1 || opt1.trim() === '') opt1 = ' ';
+    let opt2 = this.state.options[1]; if (!opt2 || opt2.trim() === '') opt2 = '  ';
+    let opt3 = this.state.options[2]; if (!opt3 || opt3.trim() === '') opt3 = '   ';
+    let opt4 = this.state.options[3]; if (!opt4 || opt4.trim() === '') opt4 = '    ';
+    
+    const formData = new FormData();
+    formData.append('id', this.state.id);
+    formData.append('body', this.state.body);
     if (this.state.questionType !== 'NUMERICAL') {
-      const opts = this.state.options.filter(x => x && x.trim() !== '');
-      if (new Set(opts).size !== opts.length) {
-        this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'All text options must be unique.' });
-        return;
-      }
+      formData.append('options', opt1);
+      formData.append('options', opt2);
+      formData.append('options', opt3);
+      formData.append('options', opt4);
+    } else {
+      formData.append('options', ' ');
     }
-    this.props.updateQuestionAction(this.state);
+    
+    formData.append('subject', this.state.subject);
+    formData.append('questionType', this.state.questionType);
+    
+    if (Array.isArray(this.state.answer)) {
+      this.state.answer.forEach(ans => formData.append('answer', ans));
+    } else {
+      formData.append('answer', this.state.answer);
+    }
+    
+    formData.append('marks', this.state.marks);
+    formData.append('explanation', this.state.explanation);
+    
+    if(this.state.bodyImage) formData.append('bodyImage', this.state.bodyImage);
+    if(this.state.optImg1) formData.append('optImg1', this.state.optImg1);
+    if(this.state.optImg2) formData.append('optImg2', this.state.optImg2);
+    if(this.state.optImg3) formData.append('optImg3', this.state.optImg3);
+    if(this.state.optImg4) formData.append('optImg4', this.state.optImg4);
+    
+    this.props.updateQuestionAction(formData);
   }
 
   render() {
@@ -164,6 +204,11 @@ class ViewnUpdateQuestion extends React.Component {
           required
           fullWidth
         />
+        <div style={{ marginTop: '10px', textAlign: 'left', marginLeft: '20px' }}>
+          <label>Or Upload Question Image: </label>
+          <input type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
+          {this.props.question.bodyImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>}
+        </div>
         <br/>
         <InputLabel htmlFor='questionType-label' className={this.props.classes.optionInput}>Question Type</InputLabel>
         <Select
@@ -182,6 +227,7 @@ class ViewnUpdateQuestion extends React.Component {
 
         {this.state.questionType !== 'NUMERICAL' && (
           <React.Fragment>
+        <div style={{ border: '1px solid #ddd', padding: '10px', margin: '10px 20px', borderRadius: '5px' }}>
         <TextField
           variant='outlined'
           color="primary"
@@ -192,8 +238,14 @@ class ViewnUpdateQuestion extends React.Component {
           error_text=''
           value={this.state.options[0]}
           onChange={(event)=>(this.optionInputHandler(event,0))}
-          required
         />
+        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
+          <label>Image: </label>
+          <input type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        </div>
+        
+        <div style={{ border: '1px solid #ddd', padding: '10px', margin: '10px 20px', borderRadius: '5px' }}>
         <TextField
           variant='outlined'
           color="primary"
@@ -204,9 +256,14 @@ class ViewnUpdateQuestion extends React.Component {
           error_text=''
           value={this.state.options[1]}
           onChange={(event)=>(this.optionInputHandler(event,1))}
-          required
         />
-        <br/>
+        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
+          <label>Image: </label>
+          <input type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        </div>
+        
+        <div style={{ border: '1px solid #ddd', padding: '10px', margin: '10px 20px', borderRadius: '5px' }}>
         <TextField
           variant='outlined'
           color="primary"
@@ -217,8 +274,14 @@ class ViewnUpdateQuestion extends React.Component {
           error_text=''
           value={this.state.options[2]}
           onChange={(event)=>(this.optionInputHandler(event,2))}
-          required
         />
+        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
+          <label>Image: </label>
+          <input type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        </div>
+        
+        <div style={{ border: '1px solid #ddd', padding: '10px', margin: '10px 20px', borderRadius: '5px' }}>
         <TextField
           variant='outlined'
           color="primary"
@@ -229,8 +292,12 @@ class ViewnUpdateQuestion extends React.Component {
           error_text=''
           value={this.state.options[3]}
           onChange={(event)=>(this.optionInputHandler(event,3))}
-          required
         />
+        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
+          <label>Image: </label>
+          <input type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        </div>
         <br/>
         </React.Fragment>
         )}
