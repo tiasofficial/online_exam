@@ -102,7 +102,7 @@ class TestQuestion extends React.Component {
       const renderLabel = (text, imgUrl, optionLabel) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
           <strong style={{marginRight: '10px'}}>{optionLabel}.</strong>
-          {text !== ' ' && <span>{text}</span>}
+          {typeof text === 'string' && text.trim() !== '' && <span>{text}</span>}
           {imgUrl && imgUrl !== 'null' && <img src={getImageUrl(imgUrl)} alt="option" style={{ maxHeight: '100px' }} />}
         </div>
       );
