@@ -1,6 +1,7 @@
 var subjectModel = require('../models/subject')
 var questionModel = require('../models/question');
 var testModel = require('../models/test');
+const { uploadFile } = require('./cloudinary');
 
 var addQuestion = (req,res,next)=>{
   var creator = req.user || null;
@@ -118,10 +119,10 @@ var searchQuestion = (req,res,next)=>{
 }
 
 //update question and ans
-var updateQuestion = (req,res,next)=>{
+var updateQuestion = async (req,res,next)=>{
   var creator = req.user || null
   if(creator == null || req.user.usertype != 'TEACHER') {
-    res.status(401).json({
+    return res.status(401).json({
       success : false,
       message : "Permissions not granted!"
     })
@@ -136,51 +137,69 @@ var updateQuestion = (req,res,next)=>{
   var errors = req.validationErrors()
   if(errors) {
     console.log(errors);
-    res.json({
+    return res.json({
       success : false,
       message : 'Invalid inputs',
       errors : errors
     })
-    return;
   }
   if(req.body.questionType !== 'NUMERICAL' && req.body.questionType !== 'MULTIPLE' && req.body.options.includes(req.body.answer) == false) {
-    res.json({
+    return res.json({
       success : false,
       message : 'Invalid inputs',
       error : 'Answer is not in list of options'
     })
-    return;
   }
   var explanation = req.body.explanation || null;
-  questionModel.findByIdAndUpdate(req.body.id,{
-    body : req.body.body,
-    explanation : explanation,
-    options : req.body.options,
-    subject : req.body.subject,
-    questionType : req.body.questionType || 'SINGLE',
-    marks : req.body.marks,
-    answer : req.body.answer,
-    createdBy : creator._id
-  }).then((result)=>{
-    if(result) {
-      res.json({
-        success:true,
-        message : 'success'
-      })
-    } else {
-      res.json({
+  
+  try {
+      const question = await questionModel.findById(req.body.id);
+      if (!question) {
+        return res.json({ success: false, message: "Question not found" });
+      }
+      
+      let bodyImage = question.bodyImage || '';
+      let optionImages = question.optionImages || ['', '', '', ''];
+      
+      if (req.files) {
+        if (req.files['bodyImage']) bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+        if (req.files['optImg1']) optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
+        if (req.files['optImg2']) optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
+        if (req.files['optImg3']) optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
+        if (req.files['optImg4']) optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+      }
+
+      const result = await questionModel.findByIdAndUpdate(req.body.id,{
+        body : req.body.body,
+        explanation : explanation,
+        options : req.body.options,
+        subject : req.body.subject,
+        questionType : req.body.questionType || 'SINGLE',
+        marks : req.body.marks,
+        answer : req.body.answer,
+        createdBy : creator._id,
+        bodyImage: bodyImage,
+        optionImages: optionImages
+      });
+      
+      if(result) {
+        res.json({
+          success:true,
+          message : 'success'
+        })
+      } else {
+        res.json({
+          success : false,
+          message : 'not updated'
+        })
+      }
+  } catch(err) {
+      console.log(err);
+      res.status(500).json({
         success : false,
-        message : 'not updated'
+        message : "server error"
       })
-    }
-  })
-  .catch((err)=>{
-    console.log(err);
-    res.status(500).json({
-      success : false,
-      message : "server error"
-    })
-  })
+  }
 }
 
 

@@ -77,8 +77,8 @@ var calculateMarks = async(questionids, answers, ansid) => {
         let userAns = Array.isArray(answers[index]) ? answers[index] : (typeof answers[index] === 'string' ? answers[index].split(',') : [answers[index]]);
         let actualAns = Array.isArray(questionDetails[i].answer) ? questionDetails[i].answer : (typeof questionDetails[i].answer === 'string' ? questionDetails[i].answer.split(',') : [questionDetails[i].answer]);
         
-        userAns = userAns.map(a => a.toString().trim());
-        actualAns = actualAns.map(a => a.toString().trim());
+        userAns = userAns.map(a => a.toString());
+        actualAns = actualAns.map(a => a.toString());
         
         let correctCount = 0;
         let incorrectCount = 0;
