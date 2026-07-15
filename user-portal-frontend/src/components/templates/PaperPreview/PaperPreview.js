@@ -286,7 +286,7 @@ class PaperPreview extends Component {
                       label="Correct Answer"
                     >
                       {[1, 2, 3, 4].map(num => (
-                        <MenuItem key={num} value={editData[`option${num}`]} disabled={!editData[`option${num}`] || editData[`option${num}`].trim() === ''}>
+                        <MenuItem key={num} value={editData[`option${num}`]} disabled={!editData[`option${num}`]}>
                           <Checkbox checked={Array.isArray(editData.answer) && editData.answer.indexOf(editData[`option${num}`]) > -1} />
                           <ListItemText primary={`Option ${num}`} />
                         </MenuItem>
