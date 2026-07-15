@@ -84,9 +84,21 @@ class TestResultViewQuestions extends React.Component {
     if(this.props.result.resultQuestion!==undefined) {
       var resultQuestion = [];
       for(var i in this.props.result.resultQuestion) {
+        let q = this.props.result.resultQuestion[i];
+        let normalizedAnswer = q.answer;
+        if (q.questionType === 'MULTIPLE' && typeof normalizedAnswer === 'string') {
+            normalizedAnswer = normalizedAnswer.split(',');
+        }
+        
+        let normalizedStudentAnswer = this.props.result.answers[i];
+        if (q.questionType === 'MULTIPLE' && typeof normalizedStudentAnswer === 'string') {
+            normalizedStudentAnswer = normalizedStudentAnswer.split(',');
+        }
+        
         resultQuestion.push({
-          ...this.props.result.resultQuestion[i],
-          studentanswer : this.props.result.answers[i]
+          ...q,
+          answer: normalizedAnswer,
+          studentanswer: normalizedStudentAnswer
         });
       }
       return(<div>
@@ -119,7 +131,7 @@ class TestResultViewQuestions extends React.Component {
                         : r.answer === r.options[optIndex];
                       return (
                       <span key={optIndex} className={isOptCorrect ? this.props.classes.tcorrect : this.props.classes.toption} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        {r.options[optIndex] !== ' ' ? r.options[optIndex] : ''}
+                        {typeof r.options[optIndex] === 'string' && r.options[optIndex].trim() !== '' ? r.options[optIndex] : ''}
                         {r.optionImages && r.optionImages[optIndex] && r.optionImages[optIndex] !== 'null' && r.optionImages[optIndex] !== 'undefined' && String(r.optionImages[optIndex]).trim() !== '' && (
                           <img src={getImageUrl(r.optionImages[optIndex])} alt="option" style={{ maxHeight: '40px' }} />
                         )}
@@ -135,26 +147,36 @@ class TestResultViewQuestions extends React.Component {
                 if (qType === 'NUMERICAL') {
                   isCorrect = !isNaN(parseFloat(r.answer)) && !isNaN(parseFloat(r.studentanswer)) && parseFloat(r.answer).toFixed(2) === parseFloat(r.studentanswer).toFixed(2);
                 } else if (qType === 'MULTIPLE') {
-                   let actualArr = Array.isArray(r.answer) ? r.answer : (typeof r.answer === 'string' ? r.answer.split(',') : [r.answer]);
-                   let userArr = Array.isArray(r.studentanswer) ? r.studentanswer : (typeof r.studentanswer === 'string' ? r.studentanswer.split(',') : [r.studentanswer]);
+                   let actualArr = Array.isArray(r.answer) ? r.answer : [r.answer];
+                   let userArr = Array.isArray(r.studentanswer) ? r.studentanswer : [r.studentanswer];
                    if(!r.studentanswer) userArr = [];
-                   actualArr = actualArr.map(a => a.toString().trim()).sort();
-                   userArr = userArr.map(a => a.toString().trim()).sort();
+                   actualArr = actualArr.map(a => String(a)).sort();
+                   userArr = userArr.map(a => String(a)).sort();
                    isCorrect = JSON.stringify(actualArr) === JSON.stringify(userArr);
                 } else {
                   isCorrect = r.answer === r.studentanswer;
                 }
-                const displayAnswer = (ans) => Array.isArray(ans) ? ans.join(', ') : ans;
+                
+                const formatAnswer = (ans) => {
+                   if(Array.isArray(ans)) return ans.map(a => formatAnswer(a)).join(', ');
+                   if(ans === undefined || ans === null) return ans;
+                   if(typeof ans === 'string' && ans.trim() === '') {
+                     let idx = r.options ? r.options.indexOf(ans) : -1;
+                     if(idx !== -1) return `Option ${String.fromCharCode(65 + idx)} [Image]`;
+                     return '[Image Option]';
+                   }
+                   return ans;
+                }
 
                 return (
                   <React.Fragment>
                     <span className={this.props.classes.tkey}>Your Answer </span>
                     :
-                    <span className={isCorrect ? this.props.classes.tcorrect : this.props.classes.tfalse}>{displayAnswer(r.studentanswer) || "(no answer selected)"}</span> 
+                    <span className={isCorrect ? this.props.classes.tcorrect : this.props.classes.tfalse}>{formatAnswer(r.studentanswer) || "(no answer selected)"}</span> 
                     <br/>
                     <span className={this.props.classes.tkey}>Correct Answer </span>
                     :
-                    <span className={this.props.classes.tcorrect}>{displayAnswer(r.answer)}</span> 
+                    <span className={this.props.classes.tcorrect}>{formatAnswer(r.answer)}</span> 
                   </React.Fragment>
                 );
               })()}
