@@ -2,7 +2,7 @@ var testModel = require('../models/test');
 var questionModel = require('../models/question');
 const testRegistrationModel = require('../models/testRegistration');
 const classModel = require('../models/class');
-const { uploadFile } = require('./cloudinary');
+const { uploadFile, deleteFile } = require('./cloudinary');
 
 var getTestStatus = (test) => {
   if(test.status === 'CANCELLED')
@@ -552,19 +552,23 @@ var deleteTest = async (req, res, next) => {
     const questions = await questionModel.find({ _id: { $in: test.questions } });
 
     for (const q of questions) {
-      if (q.bodyImage && q.bodyImage.startsWith('/uploads/')) {
-        const filePath = path.join(__dirname, '../public', q.bodyImage);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+      if (q.bodyImage) {
+        if (q.bodyImage.startsWith('/uploads/')) {
+          const filePath = path.join(__dirname, '../public', q.bodyImage);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } else if (q.bodyImage.includes('res.cloudinary.com')) {
+          await deleteFile(q.bodyImage);
         }
       }
 
       if (q.optionImages && q.optionImages.length > 0) {
         for (const optImg of q.optionImages) {
-          if (optImg && optImg.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '../public', optImg);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
+          if (optImg) {
+            if (optImg.startsWith('/uploads/')) {
+              const filePath = path.join(__dirname, '../public', optImg);
+              if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } else if (optImg.includes('res.cloudinary.com')) {
+              await deleteFile(optImg);
             }
           }
         }
@@ -777,20 +781,24 @@ var deleteExamQuestion = async (req, res, next) => {
     const path = require('path');
     
     // check and delete bodyImage
-    if (question.bodyImage && question.bodyImage.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, '../public', question.bodyImage);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    if (question.bodyImage) {
+      if (question.bodyImage.startsWith('/uploads/')) {
+        const filePath = path.join(__dirname, '../public', question.bodyImage);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } else if (question.bodyImage.includes('res.cloudinary.com')) {
+        await deleteFile(question.bodyImage);
       }
     }
     
     // check and delete optionImages
     if (question.optionImages && question.optionImages.length > 0) {
       for (const optImg of question.optionImages) {
-        if (optImg && optImg.startsWith('/uploads/')) {
-          const filePath = path.join(__dirname, '../public', optImg);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        if (optImg) {
+          if (optImg.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '../public', optImg);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          } else if (optImg.includes('res.cloudinary.com')) {
+            await deleteFile(optImg);
           }
         }
       }

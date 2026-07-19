@@ -45,6 +45,29 @@ async function uploadFile(fileBuffer, originalName) {
   });
 }
 
+/**
+ * Deletes a file from Cloudinary given its secure URL.
+ * @param {string} fileUrl - The Cloudinary secure URL.
+ */
+async function deleteFile(fileUrl) {
+  try {
+    if (!fileUrl || typeof fileUrl !== 'string' || !fileUrl.includes('res.cloudinary.com')) return;
+    
+    const parts = fileUrl.split('/');
+    const folderIndex = parts.indexOf('online-exam-portal');
+    if (folderIndex === -1) return;
+    
+    const fileWithExtension = parts.slice(folderIndex).join('/');
+    const lastDot = fileWithExtension.lastIndexOf('.');
+    const publicId = lastDot !== -1 ? fileWithExtension.substring(0, lastDot) : fileWithExtension;
+    
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.error("Cloudinary delete error:", err);
+  }
+}
+
 module.exports = {
-  uploadFile
+  uploadFile,
+  deleteFile
 };
