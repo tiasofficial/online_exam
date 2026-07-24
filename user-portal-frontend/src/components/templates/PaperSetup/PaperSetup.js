@@ -65,6 +65,7 @@ class PaperSetup extends Component {
       questionType: 'SINGLE',
       marks: 1,
       explanation: '',
+      explanationImage: null,
       questions: [], // Added questions
       fileInputKey: Date.now()
     };
@@ -126,6 +127,7 @@ class PaperSetup extends Component {
     formData.append('explanation', this.state.explanation);
     
     if (this.state.bodyImage) formData.append('bodyImage', this.state.bodyImage);
+    if (this.state.explanationImage) formData.append('explanationImage', this.state.explanationImage);
     if (this.state.optImg1) formData.append('optImg1', this.state.optImg1);
     if (this.state.optImg2) formData.append('optImg2', this.state.optImg2);
     if (this.state.optImg3) formData.append('optImg3', this.state.optImg3);
@@ -147,7 +149,7 @@ class PaperSetup extends Component {
           option3: '   ', optImg3: null,
           option4: '    ', optImg4: null,
           answer: ' ', questionType: 'SINGLE', marks: 1,
-          explanation: '',
+          explanation: '', explanationImage: null,
           fileInputKey: Date.now()
         });
         this.fetchTestDetails(); // Refresh list
@@ -241,6 +243,10 @@ class PaperSetup extends Component {
             fullWidth
             placeholder="Explain why the answer is correct..."
           />
+          <div className={classes.fileInputContainer}>
+            <Typography variant="body2">Explanation Image:</Typography>
+            <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+          </div>
 
           <div className={classes.btnContainer}>
             <Button variant="contained" color="primary" type="submit">Add Question</Button>
@@ -257,11 +263,55 @@ class PaperSetup extends Component {
         </form>
 
         <div className={classes.questionList}>
-          <Typography variant="h6">Added Questions ({this.state.questions.length})</Typography>
+          <Typography variant="h6" gutterBottom>Added Questions ({this.state.questions.length})</Typography>
           {this.state.questions.map((q, i) => (
             <div key={q._id} className={classes.questionItem}>
-              <Typography variant="subtitle1">Q{i+1}: {q.body}</Typography>
-              <Typography variant="body2" color="textSecondary">Marks: {q.marks}</Typography>
+              <Typography variant="subtitle1" style={{ fontWeight: 'bold' }}>Q{i+1}: {q.body}</Typography>
+              
+              {q.bodyImage && (
+                <img src={q.bodyImage.startsWith('http') ? q.bodyImage : apis.BASE + q.bodyImage} alt="question" style={{ maxHeight: '150px', display: 'block', margin: '10px 0', borderRadius: '4px' }} />
+              )}
+              
+              {q.questionType !== 'NUMERICAL' && q.options && q.options.map((opt, optIdx) => {
+                const optImg = q.optionImages && q.optionImages[optIdx] ? q.optionImages[optIdx] : null;
+                if (!opt.trim() && !optImg) return null;
+                
+                let isCorrect = false;
+                if (q.questionType === 'MULTIPLE') {
+                  // For multiple choice, answer is usually a comma separated string
+                  let ansArr = typeof q.answer === 'string' ? q.answer.split(',') : (Array.isArray(q.answer) ? q.answer : []);
+                  isCorrect = ansArr.includes(opt);
+                } else {
+                  isCorrect = q.answer === opt;
+                }
+
+                return (
+                  <div key={optIdx} style={{ display: 'flex', alignItems: 'center', margin: '5px 0', padding: '5px', backgroundColor: isCorrect ? '#e8f5e9' : 'transparent', borderRadius: '4px' }}>
+                    <Typography variant="body2" style={{ marginRight: '10px', fontWeight: 'bold' }}>{String.fromCharCode(65 + optIdx)}.</Typography>
+                    {opt.trim() !== '' && <Typography variant="body2">{opt}</Typography>}
+                    {optImg && (
+                      <img src={optImg.startsWith('http') ? optImg : apis.BASE + optImg} alt="option" style={{ maxHeight: '50px', marginLeft: '10px', borderRadius: '4px' }} />
+                    )}
+                  </div>
+                );
+              })}
+              
+              <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px', borderLeft: '4px solid #4338ca' }}>
+                <Typography variant="body2" style={{ fontWeight: 'bold', color: '#4338ca' }}>
+                  Correct Answer: {q.answer}
+                </Typography>
+                {q.explanation && (
+                  <Typography variant="body2" style={{ marginTop: '5px', color: '#555' }}>
+                    <strong>Explanation:</strong> {q.explanation}
+                  </Typography>
+                )}
+                {q.explanationImage && q.explanationImage !== 'undefined' && q.explanationImage !== 'null' && String(q.explanationImage).trim() !== '' && (
+                  <img src={String(q.explanationImage).startsWith('http') ? q.explanationImage : apis.BASE + q.explanationImage} alt="explanation" style={{ maxHeight: '100px', display: 'block', marginTop: '10px', borderRadius: '4px' }} />
+                )}
+                <Typography variant="body2" color="textSecondary" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                  Marks: {q.marks} &nbsp;|&nbsp; Type: {q.questionType}
+                </Typography>
+              </div>
             </div>
           ))}
         </div>

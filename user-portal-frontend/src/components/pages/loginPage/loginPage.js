@@ -59,7 +59,7 @@ class LoginPage extends React.Component {
             >
               <Toolbar style={{ display: 'flex', justifyContent: 'center' }}>
                     <Typography variant='h5' component='h1' style={{ fontWeight: 'bold' }}>
-                      COMPUTER BASED TEST (CBT) EXAM PORTAL
+                      COMPUTER BASED TEST (CBT) EXAM PORTAL - SILIGURI
                     </Typography>
               </Toolbar>
             </AppBar>

@@ -62,7 +62,9 @@ class ViewnUpdateQuestion extends React.Component {
       questionType: this.props.question.questionType || 'SINGLE',
       answer : this.props.question.answer === '' ? 'None' : this.props.question.answer,
       marks : this.props.question.marks,
-      explanation : this.props.question.explanation,
+      explanation : this.props.question.explanation || "",
+      explanationImage: this.props.question.explanationImage || null,
+      fileInputKey: Date.now(),
       bodyImage: null,
       optImg1: null,
       optImg2: null,
@@ -153,6 +155,15 @@ class ViewnUpdateQuestion extends React.Component {
     const formData = new FormData();
     formData.append('id', this.state.id);
     formData.append('body', this.state.body);
+    formData.append('subject', this.state.subject);
+    formData.append('marks', this.state.marks);
+    formData.append('questionType', this.state.questionType);
+    if (this.state.explanation !== '') formData.append('explanation', this.state.explanation);
+    
+    if (this.state.explanationImage && typeof this.state.explanationImage !== 'string') {
+      formData.append('explanationImage', this.state.explanationImage);
+    }
+    
     if (this.state.questionType !== 'NUMERICAL') {
       formData.append('options', opt1);
       formData.append('options', opt2);
@@ -162,17 +173,11 @@ class ViewnUpdateQuestion extends React.Component {
       formData.append('options', ' ');
     }
     
-    formData.append('subject', this.state.subject);
-    formData.append('questionType', this.state.questionType);
-    
     if (Array.isArray(this.state.answer)) {
       this.state.answer.forEach(ans => formData.append('answer', ans));
     } else {
       formData.append('answer', this.state.answer);
     }
-    
-    formData.append('marks', this.state.marks);
-    formData.append('explanation', this.state.explanation);
     
     if(this.state.bodyImage) formData.append('bodyImage', this.state.bodyImage);
     if(this.state.optImg1) formData.append('optImg1', this.state.optImg1);
@@ -399,15 +404,24 @@ class ViewnUpdateQuestion extends React.Component {
           className={this.props.classes.textarea}
           minRows={3}
         />
-        <br/>
-        <Button 
-          variant='contained'
-          color="primary"
-          type='submit'
-          className={this.props.classes.btn}
-        >
-          Submit
-        </Button>
+        <div style={{ marginTop: '15px' }}>
+          <Typography variant="body2">Explanation Image:</Typography>
+          {this.state.explanationImage && typeof this.state.explanationImage === 'string' && (
+            <img src={this.state.explanationImage.startsWith('http') ? this.state.explanationImage : apis.BASE + this.state.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
+          )}
+          <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        
+        <div className={this.props.classes.btnContainer}>
+          <Button 
+            variant='contained'
+            color="primary"
+            type='submit'
+            className={this.props.classes.btn}
+          >
+            Submit
+          </Button>
+        </div>
         <br/>
         {this.props.question.exams && this.props.question.exams.length > 0 && (
           <div style={{textAlign: 'left', marginTop: '20px', borderTop: '1px solid #ccc', paddingTop: '20px'}}>

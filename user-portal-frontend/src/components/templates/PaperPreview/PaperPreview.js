@@ -95,9 +95,10 @@ class PaperPreview extends Component {
         optImg4: null,
         answer: q.answer,
         questionType: q.questionType || 'SINGLE',
-        marks: q.marks,
-        explanation: q.explanation || ''
-      }
+        marks: q.marks || 1,
+        explanation: q.explanation || '',
+        explanationImage: q.explanationImage || null
+      },
     });
   }
 
@@ -148,6 +149,7 @@ class PaperPreview extends Component {
     formData.append('explanation', this.state.editData.explanation);
 
     if (this.state.editData.bodyImage) formData.append('bodyImage', this.state.editData.bodyImage);
+    if (this.state.editData.explanationImage) formData.append('explanationImage', this.state.editData.explanationImage);
     if (this.state.editData.optImg1) formData.append('optImg1', this.state.editData.optImg1);
     if (this.state.editData.optImg2) formData.append('optImg2', this.state.editData.optImg2);
     if (this.state.editData.optImg3) formData.append('optImg3', this.state.editData.optImg3);
@@ -228,6 +230,14 @@ class PaperPreview extends Component {
                       )}
                     </div>
                   ))
+                )}
+                {q.explanation && (
+                  <Typography variant="body2" style={{ marginTop: '5px', color: '#555' }}>
+                    <strong>Explanation:</strong> {q.explanation}
+                  </Typography>
+                )}
+                {q.explanationImage && (
+                  <img src={q.explanationImage.startsWith('http') ? q.explanationImage : apis.BASE + q.explanationImage} alt="explanation" style={{ maxHeight: '100px', display: 'block', marginTop: '10px', borderRadius: '4px' }} />
                 )}
               </div>
             </div>
@@ -319,6 +329,14 @@ class PaperPreview extends Component {
                   fullWidth
                   placeholder="Explain why the answer is correct..."
                 />
+                
+                <div style={{ marginTop: '15px' }}>
+                  <Typography variant="body2">Explanation Image:</Typography>
+                  {this.state.editData.explanationImage && typeof this.state.editData.explanationImage === 'string' && (
+                    <img src={this.state.editData.explanationImage.startsWith('http') ? this.state.editData.explanationImage : apis.BASE + this.state.editData.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
+                  )}
+                  <input type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+                </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <Button onClick={this.handleCloseModal} color="default">Cancel</Button>

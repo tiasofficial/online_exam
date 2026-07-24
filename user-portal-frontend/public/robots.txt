@@ -2,4 +2,4 @@
 User-agent: *
 Disallow:
 
-Sitemap: https:/onlineexam.site/sitemap.xml
+Sitemap: https://your-domain.com/sitemap.xml

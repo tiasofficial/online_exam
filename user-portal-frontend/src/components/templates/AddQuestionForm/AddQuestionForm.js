@@ -59,7 +59,9 @@ class AddQuestionForm extends React.Component {
       answer : "",
       questionType: "SINGLE",
       marks : 1,
-      explanation : ""
+      explanation : "",
+      explanationImage: null,
+      fileInputKey: Date.now()
     }
   }
 
@@ -107,6 +109,10 @@ class AddQuestionForm extends React.Component {
     })
   }
 
+  handleFileChange = (e) => {
+    this.setState({ [e.target.name]: e.target.files[0] });
+  };
+
   async handleSubmit(event) {
     event.preventDefault();
     const isAnswerInvalid = this.state.questionType === 'MULTIPLE' 
@@ -124,7 +130,30 @@ class AddQuestionForm extends React.Component {
       return;
     }
     console.log(this.state);
-    const success = await this.props.addQuestionAction(this.state);
+    
+    let formData = new FormData();
+    formData.append('body', this.state.body);
+    formData.append('subject', this.state.subject);
+    formData.append('marks', this.state.marks);
+    formData.append('questionType', this.state.questionType);
+    if(this.state.explanation !== '') formData.append('explanation', this.state.explanation);
+    
+    if (this.state.explanationImage) formData.append('explanationImage', this.state.explanationImage);
+
+    if (this.state.questionType === 'MULTIPLE' && Array.isArray(this.state.answer)) {
+      formData.append('answer', this.state.answer.join(','));
+    } else {
+      formData.append('answer', this.state.answer);
+    }
+    
+    if (this.state.questionType !== 'NUMERICAL') {
+      formData.append('option1', this.state.options[0]);
+      formData.append('option2', this.state.options[1]);
+      formData.append('option3', this.state.options[2]);
+      formData.append('option4', this.state.options[3]);
+    }
+    
+    const success = await this.props.addQuestionAction(formData);
     if (success) {
       this.setState({
         body : "",
@@ -133,7 +162,9 @@ class AddQuestionForm extends React.Component {
         answer : "",
         questionType: "SINGLE",
         marks : 1,
-        explanation : ""
+        explanation : "",
+        explanationImage: null,
+        fileInputKey: Date.now()
       });
     }
   }
@@ -329,6 +360,12 @@ class AddQuestionForm extends React.Component {
           className={this.props.classes.textarea}
           minRows={3}
         />
+        <div style={{ marginTop: '15px' }}>
+          <Typography variant="body2">Explanation Image:</Typography>
+          <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+        </div>
+        
+        <div className={this.props.classes.btnContainer}>
         <br/>
         <Button 
           variant='contained'

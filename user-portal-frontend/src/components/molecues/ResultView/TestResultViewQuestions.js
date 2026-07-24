@@ -184,6 +184,11 @@ class TestResultViewQuestions extends React.Component {
               <span className={this.props.classes.tkey}>Explanation </span>
               :
               <span className={this.props.classes.tbody}>{r.explanation && r.explanation.trim() !== '' ? r.explanation : 'None'}</span> 
+              {r.explanationImage && r.explanationImage !== 'null' && r.explanationImage !== 'undefined' && String(r.explanationImage).trim() !== '' && (
+                <div style={{ marginTop: '5px' }}>
+                  <img src={getImageUrl(r.explanationImage)} alt="explanation" style={{ maxHeight: '150px', maxWidth: '100%' }} />
+                </div>
+              )}
               <br/>
             </TableCell>
             </TableRow>

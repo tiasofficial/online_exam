@@ -90,64 +90,107 @@ class TestTable extends React.Component {
       });
       if (response.data.success) {
         const data = response.data.result;
-        const doc = new jsPDF();
         
-        doc.setFontSize(18);
-        doc.text(`Test Result: ${data.testTitle}`, 14, 22);
-        
-        doc.setFontSize(12);
-        doc.text(`Student: ${data.studentName} (${data.studentEmail})`, 14, 32);
-        doc.text(`Score: ${data.score}`, 14, 40);
+        const formatAnswerHtml = (ans, q) => {
+           if(Array.isArray(ans)) return ans.map(a => formatAnswerHtml(a, q)).join('<br/> ');
+           if(ans == null) return ans;
+           if(typeof ans === 'string' && ans.trim() === '') {
+             let idx = q.options ? q.options.indexOf(ans) : -1;
+             if(idx !== -1 && q.optionImages && q.optionImages[idx] && q.optionImages[idx] !== 'null' && q.optionImages[idx] !== 'undefined') {
+               return `<div style="display:flex; align-items:center; gap: 10px;"><strong>Option ${String.fromCharCode(65 + idx)}</strong> <img src="${getImageUrl(q.optionImages[idx])}" style="max-height: 80px;" /></div>`;
+             }
+             return '<span>[Image Option]</span>';
+           }
+           let idx = q.options ? q.options.indexOf(ans) : -1;
+           if (idx !== -1 && q.optionImages && q.optionImages[idx] && q.optionImages[idx] !== 'null' && q.optionImages[idx] !== 'undefined') {
+               return `<div style="display:flex; align-items:center; gap: 10px;"><span>${ans}</span> <img src="${getImageUrl(q.optionImages[idx])}" style="max-height: 80px;" /></div>`;
+           }
+           return ans;
+        }
 
-        const tableColumn = ["Q No.", "Question", "Correct Answer", "Student's Answer"];
-        const tableRows = [];
+        let html = `
+          <html>
+            <head>
+              <title>${data.studentName} - ${data.testTitle} Result</title>
+              <style>
+                body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; }
+                h1, h2 { color: #3f51b5; margin: 5px 0; }
+                h3 { color: #d32f2f; margin-bottom: 20px; }
+                .question-block { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; page-break-inside: avoid; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+                .q-header { font-weight: bold; font-size: 1.1em; margin-bottom: 10px; color: #111; }
+                .q-image { max-height: 200px; max-width: 100%; display: block; margin-top: 10px; }
+                .ans-row { margin-top: 15px; display: flex; gap: 20px; }
+                .ans-col { flex: 1; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #eef0f2; }
+                .ans-title { font-size: 0.85em; color: #666; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; }
+                .explanation { margin-top: 15px; padding: 12px; background: #e8eaf6; border-radius: 6px; border-left: 4px solid #3f51b5; }
+                @media print {
+                  body { padding: 0; background: white; }
+                  .question-block { border: 1px solid #ccc; box-shadow: none; }
+                }
+              </style>
+            </head>
+            <body>
+              <h1>Test Result: ${data.testTitle}</h1>
+              <h2>Student: ${data.studentName} (${data.studentEmail})</h2>
+              <h3>Score: ${data.score}</h3>
+              <hr style="margin-bottom: 30px; border: 0; border-top: 1px solid #eee;" />
+        `;
 
         if (data.questions && Array.isArray(data.questions)) {
           data.questions.forEach((q, index) => {
-            if (!q) return; // Skip if question data is missing
+            if (!q) return;
             
-            const formatAnswer = (ans) => {
-               if(Array.isArray(ans)) return ans.map(a => formatAnswer(a)).join(', ');
-               if(!ans) return ans;
-               if(typeof ans === 'string' && ans.trim() === '') {
-                 let idx = q.options ? q.options.indexOf(ans) : -1;
-                 if(idx !== -1) return `Option ${String.fromCharCode(65 + idx)} [Image]`;
-                 return '[Image Option]';
-               }
-               return ans;
-            }
-
             let correctAnswerRaw = q.answer;
             if (q.questionType === 'MULTIPLE' && typeof correctAnswerRaw === 'string') {
                correctAnswerRaw = correctAnswerRaw.split(',');
             }
-            let correctAnswer = formatAnswer(correctAnswerRaw);
-            let studentAnswer = data.answers && data.answers[index] ? formatAnswer(data.answers[index]) : "Not Answered";
-            let bodyText = q.body || '';
-            if (bodyText.length > 50) bodyText = bodyText.substring(0, 50) + "...";
-            tableRows.push([
-              index + 1,
-              bodyText,
-              correctAnswer,
-              studentAnswer
-            ]);
+            let correctAnswerHtml = formatAnswerHtml(correctAnswerRaw, q);
+            let studentAnswerHtml = data.answers && data.answers[index] != null && data.answers[index] !== '' && (Array.isArray(data.answers[index]) ? data.answers[index].length > 0 : true) ? formatAnswerHtml(data.answers[index], q) : "<span style='color:#d32f2f; font-weight: 500;'>Not Attempted</span>";
+            
+            html += `
+              <div class="question-block">
+                <div class="q-header">Q${index + 1}. ${q.body || ''}</div>
+                ${q.bodyImage && q.bodyImage !== 'null' && q.bodyImage !== 'undefined' && String(q.bodyImage).trim() !== '' ? `<img class="q-image" src="${getImageUrl(q.bodyImage)}" />` : ''}
+                
+                <div class="ans-row">
+                  <div class="ans-col">
+                    <div class="ans-title">Correct Answer</div>
+                    <div style="font-size: 16px;">${correctAnswerHtml}</div>
+                  </div>
+                  <div class="ans-col">
+                    <div class="ans-title">Student's Answer</div>
+                    <div style="font-size: 16px;">${studentAnswerHtml}</div>
+                  </div>
+                </div>
+            `;
+            
+            if ((q.explanation && q.explanation.trim() !== '') || (q.explanationImage && q.explanationImage !== 'null' && q.explanationImage !== 'undefined' && String(q.explanationImage).trim() !== '')) {
+              html += `<div class="explanation">
+                <div class="ans-title">Explanation</div>
+                ${q.explanation && q.explanation.trim() !== '' ? `<div style="margin-bottom: 8px;">${q.explanation}</div>` : ''}
+                ${q.explanationImage && q.explanationImage !== 'null' && q.explanationImage !== 'undefined' && String(q.explanationImage).trim() !== '' ? `<img class="q-image" style="max-height: 120px;" src="${getImageUrl(q.explanationImage)}" />` : ''}
+              </div>`;
+            }
+            
+            html += `</div>`;
           });
         }
 
-        autoTable(doc, {
-          head: [tableColumn],
-          body: tableRows,
-          startY: 50,
-          styles: { fontSize: 10 },
-          columnStyles: {
-            0: { cellWidth: 15 },
-            1: { cellWidth: 70 },
-            2: { cellWidth: 50 },
-            3: { cellWidth: 50 }
-          }
-        });
+        html += `
+            <script>
+              window.onload = function() {
+                setTimeout(() => {
+                  window.print();
+                }, 1000); // Give images a moment to load before printing
+              };
+            </script>
+            </body>
+          </html>
+        `;
 
-        doc.save(`${data.studentName}_${data.testTitle}_Result.pdf`);
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(html);
+        printWindow.document.close();
       } else {
         alert("Failed to fetch details: " + response.data.message);
       }
