@@ -159,10 +159,12 @@ var updateQuestion = async (req,res,next)=>{
       }
       
       let bodyImage = question.bodyImage || '';
+      let explanationImage = question.explanationImage || '';
       let optionImages = question.optionImages || ['', '', '', ''];
       
       if (req.files) {
         if (req.files['bodyImage']) bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+        if (req.files['explanationImage']) explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
         if (req.files['optImg1']) optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
         if (req.files['optImg2']) optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
         if (req.files['optImg3']) optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
@@ -179,6 +181,7 @@ var updateQuestion = async (req,res,next)=>{
         answer : req.body.answer,
         createdBy : creator._id,
         bodyImage: bodyImage,
+        explanationImage: explanationImage,
         optionImages: optionImages
       });
       
@@ -424,6 +427,7 @@ var getQuestionAnswerByIds = (req,res,next) => {
               answer : ques[q].answer,
               explanation : ques[q].explanation,
               bodyImage: ques[q].bodyImage,
+              explanationImage: ques[q].explanationImage,
               optionImages: ques[q].optionImages
             })
             break;

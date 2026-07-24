@@ -518,7 +518,9 @@ var getTestQuestionsForTeacher = async(req,res,next) => {
           answer:x.answer,
           questionType: x.questionType,
           marks : x.marks,
-          subject: x.subject
+          subject: x.subject,
+          explanation: x.explanation,
+          explanationImage: x.explanationImage
         }))
       });
     } else {
@@ -571,6 +573,15 @@ var deleteTest = async (req, res, next) => {
               await deleteFile(optImg);
             }
           }
+        }
+      }
+
+      if (q.explanationImage) {
+        if (q.explanationImage.startsWith('/uploads/')) {
+          const filePath = path.join(__dirname, '../public', q.explanationImage);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } else if (q.explanationImage.includes('res.cloudinary.com')) {
+          await deleteFile(q.explanationImage);
         }
       }
     }
@@ -634,10 +645,12 @@ var addExamQuestion = async (req, res, next) => {
     
     // Process uploaded images
     let bodyImage = null;
+    let explanationImage = null;
     let optionImages = ['', '', '', ''];
     
     if (req.files) {
       if (req.files['bodyImage']) bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+      if (req.files['explanationImage']) explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
       if (req.files['optImg1']) optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
       if (req.files['optImg2']) optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
       if (req.files['optImg3']) optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
@@ -655,6 +668,7 @@ var addExamQuestion = async (req, res, next) => {
       marks: parseInt(marks),
       subject: targetSubject, // Need a subject for schema validation
       explanation: explanation || '',
+      explanationImage: explanationImage || '',
       createdBy: req.user._id,
       status: true
     });
@@ -712,6 +726,9 @@ var editExamQuestion = async (req, res, next) => {
       let imagesModified = false;
       if (req.files['bodyImage']) {
         question.bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+      }
+      if (req.files['explanationImage']) {
+        question.explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
       }
       if (req.files['optImg1']) {
         question.optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
@@ -801,6 +818,16 @@ var deleteExamQuestion = async (req, res, next) => {
             await deleteFile(optImg);
           }
         }
+      }
+    }
+    
+    // check and delete explanationImage
+    if (question.explanationImage) {
+      if (question.explanationImage.startsWith('/uploads/')) {
+        const filePath = path.join(__dirname, '../public', question.explanationImage);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } else if (question.explanationImage.includes('res.cloudinary.com')) {
+        await deleteFile(question.explanationImage);
       }
     }
 

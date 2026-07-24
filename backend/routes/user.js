@@ -17,6 +17,7 @@ router.post('/getTestById',testService.getTestDetailsFromId);
 router.post('/addQuestion',questionService.addQuestion);
 router.post('/addExamQuestion', upload.fields([
   { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
   { name: 'optImg1', maxCount: 1 },
   { name: 'optImg2', maxCount: 1 },
   { name: 'optImg3', maxCount: 1 },
@@ -25,6 +26,7 @@ router.post('/addExamQuestion', upload.fields([
 
 router.post('/editExamQuestion', upload.fields([
   { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
   { name: 'optImg1', maxCount: 1 },
   { name: 'optImg2', maxCount: 1 },
   { name: 'optImg3', maxCount: 1 },
@@ -38,6 +40,7 @@ router.post('/deleteSubject',subjectService.deleteSubject);
 router.post('/searchQuestion',questionService.searchQuestion);
 router.post('/updateQuestion', upload.fields([
   { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
   { name: 'optImg1', maxCount: 1 },
   { name: 'optImg2', maxCount: 1 },
   { name: 'optImg3', maxCount: 1 },

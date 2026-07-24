@@ -11,6 +11,9 @@ var questionSchema = new mongoose.Schema({
   explanation : {
     type : String
   },
+  explanationImage: {
+    type: String
+  },
   options : [ {
     type : String,
     required : true

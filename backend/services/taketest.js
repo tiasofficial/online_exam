@@ -65,36 +65,57 @@ var calculateMarks = async(questionids, answers, ansid) => {
       let qType = questionDetails[i].questionType || 'SINGLE';
       let qMarks = questionDetails[i].marks;
       
-      if (qType === 'NUMERICAL') {
-        let userAnsNum = parseFloat(answers[index]);
-        let actualAnsNum = parseFloat(questionDetails[i].answer);
-        if (!isNaN(userAnsNum) && !isNaN(actualAnsNum)) {
-          if (userAnsNum.toFixed(2) === actualAnsNum.toFixed(2)) {
-            marks += qMarks;
+      let isAttempted = false;
+      let userAns = [];
+      
+      if (answers[index] != null) {
+        if (qType === 'MULTIPLE') {
+          let rawAns = Array.isArray(answers[index]) ? answers[index] : (typeof answers[index] === 'string' && answers[index] !== '' ? answers[index].split(',') : [answers[index]]);
+          userAns = rawAns.map(a => a != null ? a.toString().trim() : '');
+          isAttempted = userAns.length > 0;
+        } else if (qType === 'NUMERICAL') {
+          isAttempted = answers[index].toString().trim() !== '';
+        } else {
+          // SINGLE_CHOICE
+          isAttempted = true;
+        }
+      }
+
+      if (isAttempted) {
+        if (qType === 'NUMERICAL') {
+          let userAnsNum = parseFloat(answers[index]);
+          let actualAnsNum = parseFloat(questionDetails[i].answer);
+          if (!isNaN(userAnsNum) && !isNaN(actualAnsNum)) {
+            if (userAnsNum.toFixed(2) === actualAnsNum.toFixed(2)) {
+              marks += qMarks;
+            } else {
+              marks -= 1;
+            }
           }
-        }
-      } else if (qType === 'MULTIPLE') {
-        let userAns = Array.isArray(answers[index]) ? answers[index] : (typeof answers[index] === 'string' ? answers[index].split(',') : [answers[index]]);
-        let actualAns = Array.isArray(questionDetails[i].answer) ? questionDetails[i].answer : (typeof questionDetails[i].answer === 'string' ? questionDetails[i].answer.split(',') : [questionDetails[i].answer]);
-        
-        userAns = userAns.map(a => a.toString());
-        actualAns = actualAns.map(a => a.toString());
-        
-        let correctCount = 0;
-        let incorrectCount = 0;
-        userAns.forEach(a => {
-          if (actualAns.includes(a)) correctCount++;
-          else incorrectCount++;
-        });
-        
-        if (incorrectCount === 0 && correctCount > 0) {
-          // Partial marking
-          marks += (correctCount / actualAns.length) * qMarks;
-        }
-      } else {
-        // SINGLE_CHOICE
-        if(questionDetails[i].answer.toString() === answers[index].toString()) {
-          marks += qMarks;
+        } else if (qType === 'MULTIPLE') {
+          let actualAns = Array.isArray(questionDetails[i].answer) ? questionDetails[i].answer : (typeof questionDetails[i].answer === 'string' && questionDetails[i].answer !== '' ? questionDetails[i].answer.split(',') : [questionDetails[i].answer]);
+          actualAns = actualAns.map(a => a != null ? a.toString().trim() : '');
+          
+          let correctCount = 0;
+          let incorrectCount = 0;
+          userAns.forEach(a => {
+            if (actualAns.includes(a)) correctCount++;
+            else incorrectCount++;
+          });
+          
+          if (incorrectCount === 0 && correctCount > 0) {
+            // Partial marking
+            marks += (correctCount / actualAns.length) * qMarks;
+          } else if (incorrectCount > 0) {
+            marks -= 1; // Negative mark for wrong selection
+          }
+        } else {
+          // SINGLE_CHOICE
+          if(questionDetails[i].answer.toString().trim() === answers[index].toString().trim()) {
+            marks += qMarks;
+          } else {
+            marks -= 1;
+          }
         }
       }
     }
