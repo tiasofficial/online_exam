@@ -96,6 +96,53 @@ class PaperSetup extends Component {
     this.setState({ [e.target.name]: e.target.files[0] });
   }
 
+  handlePaste = (e, targetName) => {
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      if (file.type.startsWith('image/')) {
+        this.setState({ [targetName]: file });
+        e.preventDefault();
+      }
+    }
+  }
+
+  renderImageUpload = (name, label) => {
+    return (
+      <div 
+        onPaste={(e) => this.handlePaste(e, name)}
+        style={{
+          border: '2px dashed #aaa',
+          borderRadius: '4px',
+          padding: '10px',
+          marginTop: '10px',
+          cursor: 'text',
+          backgroundColor: '#fafafa',
+          outline: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}
+        tabIndex={0}
+      >
+        <Typography variant="body2">
+          <strong>{label}</strong>: Choose a file OR click here and press Ctrl+V to paste a screenshot.
+        </Typography>
+        <input 
+          key={this.state.fileInputKey} 
+          type="file" 
+          name={name} 
+          accept="image/*" 
+          onChange={this.handleFileChange} 
+        />
+        {this.state[name] && (
+          <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            ✓ Image attached: {this.state[name].name || 'Pasted Image'}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   handleAddQuestion = async (e) => {
     e.preventDefault();
     if (!this.state.body && !this.state.bodyImage) {
@@ -177,10 +224,7 @@ class PaperSetup extends Component {
           <div className={classes.optionContainer}>
             <Typography variant="h6">Question</Typography>
             <TextField fullWidth label="Question Text" name="body" value={this.state.body} onChange={this.handleInputChange} margin="normal" variant="outlined" />
-            <div className={classes.fileInputContainer}>
-              <Typography variant="body2">Or Upload Image:</Typography>
-              <input key={this.state.fileInputKey} type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
-            </div>
+            {this.renderImageUpload('bodyImage', 'Question Image')}
           </div>
           
           <FormControl variant="outlined" margin="normal">
@@ -196,10 +240,7 @@ class PaperSetup extends Component {
             <div key={num} className={classes.optionContainer}>
               <Typography variant="subtitle2">Option {num}</Typography>
               <TextField fullWidth label={`Option ${num} Text`} name={`option${num}`} value={this.state[`option${num}`]} onChange={this.handleInputChange} margin="normal" variant="outlined" />
-              <div className={classes.fileInputContainer}>
-                <Typography variant="body2">Image:</Typography>
-                <input key={this.state.fileInputKey} type="file" name={`optImg${num}`} accept="image/*" onChange={this.handleFileChange} />
-              </div>
+              {this.renderImageUpload(`optImg${num}`, `Option ${num} Image`)}
             </div>
           ))}
 
@@ -243,10 +284,7 @@ class PaperSetup extends Component {
             fullWidth
             placeholder="Explain why the answer is correct..."
           />
-          <div className={classes.fileInputContainer}>
-            <Typography variant="body2">Explanation Image:</Typography>
-            <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
-          </div>
+          {this.renderImageUpload('explanationImage', 'Explanation Image')}
 
           <div className={classes.btnContainer}>
             <Button variant="contained" color="primary" type="submit">Add Question</Button>
