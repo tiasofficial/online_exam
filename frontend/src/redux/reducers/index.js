@@ -1,14 +1,18 @@
 import { combineReducers } from "redux";
-import { dashBoardCountReducer } from "./counts";
+import { alertReducer } from "./alert";
 import { loginUserReducer } from "./login";
-import { getAllStudentReducer } from "./studentDetails";
-import { getAllSubjectsReducer } from "./subjectDetails";
-import { getAllTeachersReducer } from "./teacherDetails";
+import { getQuestionReducer } from "./question";
+import { getAllSubjectsReducer } from "./subject";
+import { TakeTestReducer } from "./taketest";
+import { TestReducer } from './test';
+import { classReducer } from './class';
 
 export default combineReducers({
   user : loginUserReducer,
-  dashboardDetails : dashBoardCountReducer,
-  teachers : getAllTeachersReducer,
-  students : getAllStudentReducer,
-  subjects : getAllSubjectsReducer
+  alertDetails : alertReducer,
+  subjectDetails : getAllSubjectsReducer,
+  questionDetails : getQuestionReducer,
+  testDetails : TestReducer,
+  takeTestDetails : TakeTestReducer,
+  classes : classReducer
 });

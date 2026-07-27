@@ -1,12 +1,11 @@
-import axios from "axios"
-import apis from "../../services/Apis";
-import { ActionTypes } from "../constants/action-types";
-import Auth from "../../services/Auth";
-import Alert from "../../services/alert";
+import apis from "../../helper/Apis";
+import { ActionTypes } from "../action-types";
+import Auth from "../../helper/Auth";
+import axios from "axios";
 
 
-export const loginUser = (details) => {
-  return async(dispatch, getState) => {
+export const loginRequestAction = (details) => {
+  return async(dispatch) => {
     const response = await axios.post(apis.BASE+ apis.LOGIN,details);
     if(response.data.success) {
       Auth.storeToken(response.data.token);
@@ -14,19 +13,36 @@ export const loginUser = (details) => {
         type: ActionTypes.LOGIN,
         payload : {
           isLoggedIn : true,
-          userDetails : response.data.admin
+          userDetails : response.data.user
         }
       })
     } else {
       Auth.deleteToken();
-      return Alert('error','invalid data',response.data.message);
+      dispatch({
+        type:ActionTypes.SET_ALERT,
+        payload : {
+          isAlert : true,
+          title : "Login Failed",
+          type : "error",
+          message : response.data.message
+        }
+      })
     }
   }
 }
 
-export const getAdminDetails = () => {
+
+export const logoutUser = ()=> dispatch =>{
+  Auth.deleteToken();
+  dispatch({
+     type : ActionTypes.LOGOUT,
+     payload : 'Manual Logout'
+  })
+}
+
+export const getUserDetails = () => {
   return async(dispatch) => {
-    axios.get(apis.BASE+apis.GET_ADMIN_DETAILS, {
+    axios.get(apis.BASE+apis.GET_USER_DETAILS, {
       headers:{
         'Authorization':`Bearer ${Auth.retriveToken()}`
       }
@@ -45,19 +61,10 @@ export const getAdminDetails = () => {
           dispatch({ type: ActionTypes.LOGOUT });
         }
       
-    }).catch(err => {
-      console.log(err);
+    }).catch(err=> {
       Auth.deleteToken();
       dispatch({ type: ActionTypes.LOGOUT });
-    })
+    }) 
     
   }
-}
-
-export const logoutUser = ()=> dispatch =>{
-  Auth.deleteToken();
-  dispatch({
-     type : ActionTypes.LOGOUT,
-     payload : 'Manual Logout'
-  })
 }

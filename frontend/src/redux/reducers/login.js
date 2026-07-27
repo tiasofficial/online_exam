@@ -1,4 +1,4 @@
-import { ActionTypes } from "../constants/action-types";
+import { ActionTypes } from "../action-types";
 
 const initialState = {
   isLoggedIn : false,
@@ -10,7 +10,7 @@ export const loginUserReducer = (state = initialState,{type,payload})=>{
     case ActionTypes.LOGIN:
       return {...state,isLoggedIn:payload.isLoggedIn,userDetails:payload.userDetails};
     case ActionTypes.LOGOUT:
-      return {...state,isLoggedIn:false,userDetails:{}};
+      return initialState;
     default :
       return state;
   }
