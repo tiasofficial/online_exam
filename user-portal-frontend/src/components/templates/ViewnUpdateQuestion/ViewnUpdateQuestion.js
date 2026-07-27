@@ -8,7 +8,8 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import { getSubjectDetails } from '../../../redux/actions/subjectAction';
 import { updateQuestionAction } from "../../../redux/actions/questionAction";
-import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography } from "@material-ui/core";
+import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography, CircularProgress, IconButton } from "@material-ui/core";
+import CloseIcon from '@material-ui/icons/Close';
 import { apis } from "../../../environments/environment";
 
 
@@ -71,7 +72,8 @@ class ViewnUpdateQuestion extends React.Component {
       optImg1: null,
       optImg2: null,
       optImg3: null,
-      optImg4: null
+      optImg4: null,
+      submitting: false
     }
   }
 
@@ -210,7 +212,12 @@ class ViewnUpdateQuestion extends React.Component {
     if(this.state.optImg3) formData.append('optImg3', this.state.optImg3);
     if(this.state.optImg4) formData.append('optImg4', this.state.optImg4);
     
-    this.props.updateQuestionAction(formData);
+    this.setState({ submitting: true });
+    this.props.updateQuestionAction(formData).then(() => {
+      this.setState({ submitting: false });
+    }).catch(() => {
+      this.setState({ submitting: false });
+    });
   }
 
   render() {
@@ -238,7 +245,12 @@ class ViewnUpdateQuestion extends React.Component {
           <Typography variant="body2">Or Upload Question Image (paste or select): </Typography>
           <input type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
           {this.state.bodyImage ? (
-             <span style={{color: 'green'}}>New Image attached!</span>
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ New Image attached: {this.state.bodyImage.name || 'Pasted Image'}</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ bodyImage: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
           ) : (
              this.props.question.bodyImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>
           )}
@@ -275,7 +287,14 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg1')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg1 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg1 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg1: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
         
@@ -293,7 +312,14 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg2')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg2 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg2 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg2: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
         
@@ -311,7 +337,14 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg3')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg3 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg3 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg3: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
         
@@ -329,7 +362,14 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg4')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg4 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg4 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg4: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
         <br/>
@@ -452,7 +492,16 @@ class ViewnUpdateQuestion extends React.Component {
             <img src={this.state.explanationImage.startsWith('http') ? this.state.explanationImage : apis.BASE + this.state.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
           )}
           <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.explanationImage && typeof this.state.explanationImage !== 'string' && <span style={{color: 'green'}}>New image attached!</span>}
+          {this.state.explanationImage ? (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ New Image attached: {this.state.explanationImage.name || 'Pasted Image'}</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ explanationImage: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          ) : (
+            this.props.question.explanationImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>
+          )}
         </div>
         
         <div className={this.props.classes.btnContainer}>
@@ -461,8 +510,9 @@ class ViewnUpdateQuestion extends React.Component {
             color="primary"
             type='submit'
             className={this.props.classes.btn}
+            disabled={this.state.submitting}
           >
-            Submit
+            {this.state.submitting ? <CircularProgress size={24} color="inherit" /> : 'Submit'}
           </Button>
         </div>
         <br/>
