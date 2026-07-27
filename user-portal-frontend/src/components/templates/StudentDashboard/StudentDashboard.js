@@ -200,6 +200,7 @@ class StudentDashboard extends Component {
       const response = await axios.get(apis.BASE + '/api/v1/user/getStudentDashboardAnalytics', {
         headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
       });
+      console.log("Analytics API Response:", response.data);
       if (response.data.success) {
         this.setState({ analytics: response.data.data, loading: false });
       } else {
@@ -278,6 +279,10 @@ class StudentDashboard extends Component {
           <Paper className={classes.section} style={{ textAlign: 'center', padding: '40px' }}>
             <Typography variant="h6" color="textSecondary">No analytics available yet.</Typography>
             <Typography variant="body1" color="textSecondary">Take a test to see your performance metrics here.</Typography>
+            <div style={{ marginTop: 20, textAlign: 'left', background: '#f5f5f5', padding: 10, fontSize: 12, overflow: 'auto' }}>
+              <strong>DEBUG INFO (Please screenshot this!):</strong><br/>
+              <code>{JSON.stringify({ loading, error, analyticsLength: analytics?.length, rawAnalytics: analytics }, null, 2)}</code>
+            </div>
           </Paper>
         ) : (
           analytics.map(testItem => {
