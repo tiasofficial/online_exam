@@ -169,11 +169,11 @@ class TestTable extends React.Component {
                 <div class="ans-row" style="margin-top: 10px;">
                   <div class="ans-col" style="background: #e3f2fd; border: 1px solid #bbdefb;">
                     <div class="ans-title" style="color: #1976d2;">Time Spent</div>
-                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.timeSpent && data.timeSpent[index] ? parseFloat(data.timeSpent[index]).toFixed(1) : 0} seconds</div>
+                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.timeSpent && data.timeSpent[index] !== undefined && data.timeSpent[index] !== null ? parseFloat(data.timeSpent[index]).toFixed(1) : 0} seconds</div>
                   </div>
                   <div class="ans-col" style="background: #e3f2fd; border: 1px solid #bbdefb;">
                     <div class="ans-title" style="color: #1976d2;">Revisits</div>
-                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.revisitCounts && data.revisitCounts[index] ? data.revisitCounts[index] : 0}</div>
+                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.revisitCounts && data.revisitCounts[index] !== undefined && data.revisitCounts[index] !== null ? data.revisitCounts[index] : 0}</div>
                   </div>
                 </div>
             `;
