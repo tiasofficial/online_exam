@@ -39,6 +39,11 @@ var questionSchema = new mongoose.Schema({
     type : Number,
     required : true
   },
+  difficulty: {
+    type: String,
+    enum: ['EASY', 'MEDIUM', 'HARD'],
+    default: 'MEDIUM'
+  },
   status : {
     type : Boolean,
     required : true,

@@ -19,6 +19,12 @@ var answersheetSchema = new mongoose.Schema({
   answers : [{
     type : mongoose.Schema.Types.Mixed
   }],
+  timeSpent : [{
+    type : Number
+  }],
+  revisitCounts : [{
+    type : Number
+  }],
   startTime : {
     type : Date
   },
