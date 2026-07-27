@@ -5,6 +5,11 @@ var classSchema = new mongoose.Schema({
     type : String,
     required : true
   },
+  examType: {
+    type: String,
+    enum: ['JEE-Mains', 'NEET', null],
+    default: null
+  },
   students : [{
     type : mongoose.Schema.Types.ObjectId,
     ref : 'user'
