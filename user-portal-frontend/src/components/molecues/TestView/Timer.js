@@ -1,8 +1,7 @@
 import { withStyles } from "@material-ui/styles";
 import React from "react";
 import { connect } from "react-redux";
-import { saveAnswerAction } from "../../../redux/actions/takeTestAction";
-import { endTestAction } from "../../../redux/actions/takeTestAction";
+import { connect } from "react-redux";
 const useStyles = (theme)=>({
   
 })
@@ -35,7 +34,7 @@ class Timer extends React.Component {
       // Auto-save every 60 seconds
       if (!this.lastSaved || Date.now() - this.lastSaved >= 60000) {
         if (remaining > 0) {
-          this.props.saveAnswerAction();
+          if (this.props.onAutoSave) this.props.onAutoSave();
           this.lastSaved = Date.now();
         }
       }
@@ -43,7 +42,7 @@ class Timer extends React.Component {
       if (remaining <= 0) {
         remaining = 0;
         clearInterval(this.interval);
-        this.props.endTestAction();
+        if (this.props.onTimeout) this.props.onTimeout();
       }
       
       this.setState({ remainingMs: remaining });
@@ -72,8 +71,4 @@ const mapStatetoProps = state => ({
 
 })
 
-export default withStyles(useStyles)(connect(mapStatetoProps,{
-  saveAnswerAction,
-  endTestAction
-
-})(Timer));
+export default withStyles(useStyles)(connect(mapStatetoProps,{})(Timer));
