@@ -37,6 +37,7 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
       
       let totalPossibleMarks = 0;
       let totalTimeSpent = 0;
+      let questionTimeAnalytics = [];
       
       let subjects = {};
 
@@ -69,6 +70,11 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
 
         let timeSpent = answersheet.timeSpent && answersheet.timeSpent[i] ? parseFloat(answersheet.timeSpent[i]) : 0;
         let revisit = answersheet.revisitCounts && answersheet.revisitCounts[i] ? parseInt(answersheet.revisitCounts[i]) : 0;
+        
+        questionTimeAnalytics.push({
+          name: `Q${i + 1}`,
+          Time: timeSpent
+        });
         
         totalTimeSpent += timeSpent;
         subjects[subName].totalTime += timeSpent;
@@ -147,7 +153,8 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         overallScore: answersheet.score,
         totalPossibleMarks: totalPossibleMarks,
         totalTimeSpent: totalTimeSpent,
-        subjects: subjects
+        subjects: subjects,
+        questionTimeAnalytics: questionTimeAnalytics
       };
     });
 
