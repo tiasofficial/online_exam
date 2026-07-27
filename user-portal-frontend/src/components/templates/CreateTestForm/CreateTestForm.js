@@ -212,7 +212,10 @@ class CreateTestForm extends React.Component {
     event.preventDefault();
     if (this.state.isSubmitting) return;
     var dur = parseInt(this.state.duration) * 60 * 1000;
-    if(this.state.subjects.length<1) {
+    const currentClass = this.props.classesData.find(c => c._id === this.state.targetClass);
+    const isFixedClass = currentClass && (currentClass.examType === 'JEE-Mains' || currentClass.examType === 'NEET');
+
+    if(!isFixedClass && this.state.subjects.length<1) {
       this.sendAlert('error','Invalid input','select at least one subject');
     } else if(!this.state.startTime || !this.state.endTime || !this.state.resultTime) {
       this.sendAlert('error','Invalid input','Please fill in all required times (Start, End, Result)');
@@ -230,7 +233,13 @@ class CreateTestForm extends React.Component {
       this.sendAlert('error','Invalid input','select a target class');
     } else {
       this.setState({ isSubmitting: true });
-      this.props.createTestAction({...this.state, duration: dur/1000}, (testId) => {
+      
+      let finalSubjects = this.state.subjects;
+      if (isFixedClass && currentClass.subjects) {
+         finalSubjects = currentClass.subjects.map(s => s._id);
+      }
+
+      this.props.createTestAction({...this.state, subjects: finalSubjects, duration: dur/1000}, (testId) => {
         this.setState({ createdTestId: testId, setupStep: 1, isSubmitting: false });
       });
     }
@@ -238,7 +247,8 @@ class CreateTestForm extends React.Component {
 
   render() {
     if (this.state.setupStep === 1 && this.state.createdTestId) {
-      return <PaperSetup testId={this.state.createdTestId} targetSubject={this.state.subjects[0]} onFinish={() => this.setState({ setupStep: 2 })} />
+      const currentClass = this.props.classesData.find(c => c._id === this.state.targetClass);
+        return <PaperSetup testId={this.state.createdTestId} targetSubject={this.state.subjects[0]} targetClassName={currentClass ? (currentClass.examType || currentClass.name) : null} onFinish={() => this.setState({ setupStep: 2 })} />;
     }
 
     if (this.state.setupStep === 2 && this.state.createdTestId) {
@@ -286,16 +296,20 @@ class CreateTestForm extends React.Component {
 
           return (
             <React.Fragment>
-              <FormLabel className={this.props.classes.optionInput} >Subjects</FormLabel>
-              <FormGroup className={this.props.classes.inputfield}>
-                {currentClass.subjects && currentClass.subjects.map((sub)=>(
-                  <FormControlLabel key={sub._id}
-                    control={<Checkbox name={sub._id} onChange={(event)=>(this.subjectCheckboxInputHandler(event))} />}
-                    label={sub.name}
-                  />
-                ))}
-              </FormGroup>
-              <br/>
+              {currentClass.name !== 'JEE-Mains' && currentClass.name !== 'NEET' && (
+                <React.Fragment>
+                  <FormLabel className={this.props.classes.optionInput} >Subjects</FormLabel>
+                  <FormGroup className={this.props.classes.inputfield}>
+                    {currentClass.subjects && currentClass.subjects.map((sub)=>(
+                      <FormControlLabel key={sub._id}
+                        control={<Checkbox name={sub._id} onChange={(event)=>(this.subjectCheckboxInputHandler(event))} />}
+                        label={sub.name}
+                      />
+                    ))}
+                  </FormGroup>
+                  <br/>
+                </React.Fragment>
+              )}
 
               <FormLabel className={this.props.classes.optionInput} >Assign to Students</FormLabel>
               <FormGroup className={this.props.classes.inputfield}>

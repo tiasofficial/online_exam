@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import { TextField, Button, Typography, MenuItem, Select, FormControl, InputLabel, Paper, Checkbox, ListItemText } from '@material-ui/core';
+import { TextField, Button, Typography, MenuItem, Select, FormControl, InputLabel, Paper, Checkbox, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@material-ui/core';
 import axios from 'axios';
 import apis from '../../../helper/Apis';
 import Auth from '../../../helper/Auth';
@@ -64,15 +64,23 @@ class PaperSetup extends Component {
       answer: ' ',
       questionType: 'SINGLE',
       marks: 1,
+      difficulty: 'MEDIUM',
       explanation: '',
       explanationImage: null,
+      explanationImage: null,
       questions: [], // Added questions
-      fileInputKey: Date.now()
+      fileInputKey: Date.now(),
+      rulesDialogOpen: false,
+      hasShownRules: false,
+      targetClassName: props.targetClassName || null
     };
   }
 
   componentDidMount() {
     this.fetchTestDetails();
+    if (!this.props.hideFinishButton && (this.state.targetClassName === 'JEE-Mains' || this.state.targetClassName === 'NEET')) {
+      this.setState({ rulesDialogOpen: true, hasShownRules: true });
+    }
   }
 
   fetchTestDetails = async () => {
@@ -81,10 +89,31 @@ class PaperSetup extends Component {
         headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
       });
       if (qResponse.data.success) {
-        this.setState({ questions: qResponse.data.questions });
+        this.setState({ 
+          questions: qResponse.data.questions,
+          targetClassName: qResponse.data.targetClassName || this.props.targetClassName 
+        }, () => {
+          this.autoSetTypeAndMarks();
+          if (!this.props.hideFinishButton && !this.state.hasShownRules && (this.state.targetClassName === 'JEE-Mains' || this.state.targetClassName === 'NEET')) {
+            this.setState({ rulesDialogOpen: true, hasShownRules: true });
+          }
+        });
       }
     } catch (err) {
       console.log(err);
+    }
+  }
+
+  autoSetTypeAndMarks = () => {
+    if (this.state.targetClassName === 'JEE-Mains' || this.state.targetClassName === 'NEET') {
+      let currentQ = this.state.questions.length;
+      let qType = 'SINGLE';
+      if (this.state.targetClassName === 'JEE-Mains') {
+        if ((currentQ >= 20 && currentQ < 25) || (currentQ >= 45 && currentQ < 50) || (currentQ >= 70 && currentQ < 75)) {
+          qType = 'NUMERICAL';
+        }
+      }
+      this.setState({ questionType: qType, marks: 4 });
     }
   }
 
@@ -158,6 +187,11 @@ class PaperSetup extends Component {
       }
     }
 
+    if (!this.state.answer || (typeof this.state.answer === 'string' && this.state.answer.trim() === '') || (Array.isArray(this.state.answer) && this.state.answer.length === 0)) {
+      this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Please select or provide a correct answer.' });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('testId', this.props.testId);
     if (this.props.targetSubject) {
@@ -171,6 +205,7 @@ class PaperSetup extends Component {
     formData.append('answer', this.state.answer);
     formData.append('questionType', this.state.questionType);
     formData.append('marks', this.state.marks);
+    formData.append('difficulty', this.state.difficulty);
     formData.append('explanation', this.state.explanation);
     
     if (this.state.bodyImage) formData.append('bodyImage', this.state.bodyImage);
@@ -195,11 +230,12 @@ class PaperSetup extends Component {
           option2: '  ', optImg2: null,
           option3: '   ', optImg3: null,
           option4: '    ', optImg4: null,
-          answer: ' ', questionType: 'SINGLE', marks: 1,
+          answer: ' ', questionType: 'SINGLE', marks: 1, difficulty: 'MEDIUM',
           explanation: '', explanationImage: null,
           fileInputKey: Date.now()
+        }, () => {
+          this.fetchTestDetails(); // Refresh list
         });
-        this.fetchTestDetails(); // Refresh list
       } else {
         this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: response.data.message });
       }
@@ -217,8 +253,79 @@ class PaperSetup extends Component {
     const { classes, onFinish } = this.props;
     return (
       <Paper className={classes.root}>
-        <Typography variant="h5" gutterBottom>Paper Setup</Typography>
-        <Typography variant="subtitle1" gutterBottom>Add questions specifically for this exam.</Typography>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Typography variant="h5" gutterBottom>Paper Setup</Typography>
+            <Typography variant="subtitle1" gutterBottom>Add questions specifically for this exam.</Typography>
+          </div>
+          {(this.props.targetClassName === 'JEE-Mains' || this.props.targetClassName === 'NEET') && (
+            <Button variant="outlined" color="primary" onClick={() => this.setState({ rulesDialogOpen: true })}>
+              View Exam Rules
+            </Button>
+          )}
+        </div>
+
+        <Dialog open={this.state.rulesDialogOpen} onClose={() => this.setState({ rulesDialogOpen: false })} maxWidth="md" fullWidth>
+          <DialogTitle style={{ backgroundColor: '#1e293b', color: '#fff' }}>
+            Exam Structure & Rules: {this.props.targetClassName || 'Standard Exam'}
+          </DialogTitle>
+          <DialogContent dividers style={{ padding: '24px', backgroundColor: '#f8fafc' }}>
+            <div style={{ backgroundColor: '#e0f2fe', borderLeft: '4px solid #0284c7', padding: '12px 16px', borderRadius: '4px', marginBottom: '20px' }}>
+              <Typography variant="subtitle2" style={{ color: '#0369a1', fontWeight: 'bold' }}>
+                Teacher Setup Guidance:
+              </Typography>
+              <Typography variant="body2" style={{ color: '#0c4a6e' }}>
+                You are adding questions for a <strong>{this.props.targetClassName}</strong> exam. Question types and marks (+4 / -1) will be set automatically based on the question index.
+              </Typography>
+            </div>
+
+            {this.props.targetClassName === 'JEE-Mains' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Typography variant="h6" style={{ color: '#0f172a', fontWeight: 'bold' }}>JEE-Mains Pattern (75 Questions Total)</Typography>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#2563eb', fontWeight: 'bold' }}>Physics (Q 1 - 25)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• Q 1 - 20: Single Choice (+4 / -1)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• Q 21 - 25: Integer / Numerical (+4 / -1)</Typography>
+                </div>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#059669', fontWeight: 'bold' }}>Chemistry (Q 26 - 50)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• Q 26 - 45: Single Choice (+4 / -1)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• Q 46 - 50: Integer / Numerical (+4 / -1)</Typography>
+                </div>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#d97706', fontWeight: 'bold' }}>Mathematics (Q 51 - 75)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• Q 51 - 70: Single Choice (+4 / -1)</Typography>
+                  <Typography variant="body2" style={{ color: '#71717a' }}>• Q 71 - 75: Integer / Numerical (+4 / -1)</Typography>
+                </div>
+              </div>
+            ) : this.props.targetClassName === 'NEET' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Typography variant="h6" style={{ color: '#0f172a', fontWeight: 'bold' }}>NEET Pattern (180 Questions Total)</Typography>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#2563eb', fontWeight: 'bold' }}>Physics (Q 1 - 45)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• 45 Single Choice Questions (+4 / -1)</Typography>
+                </div>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#059669', fontWeight: 'bold' }}>Chemistry (Q 46 - 90)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• 45 Single Choice Questions (+4 / -1)</Typography>
+                </div>
+                <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <Typography variant="subtitle2" style={{ color: '#d97706', fontWeight: 'bold' }}>Biology (Q 91 - 180)</Typography>
+                  <Typography variant="body2" style={{ color: '#475569' }}>• 90 Single Choice Questions (+4 / -1)</Typography>
+                </div>
+              </div>
+            ) : (
+              <Typography variant="body1">
+                Standard test setup mode. Configure question text, options, and marks manually below.
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions style={{ padding: '16px 24px', backgroundColor: '#f1f5f9' }}>
+            <Button onClick={() => this.setState({ rulesDialogOpen: false })} color="primary" variant="contained" disableElevation>
+              Got it, Start Setup
+            </Button>
+          </DialogActions>
+        </Dialog>
         
         <form onSubmit={this.handleAddQuestion} className={classes.form}>
           <div className={classes.optionContainer}>
@@ -229,11 +336,22 @@ class PaperSetup extends Component {
           
           <FormControl variant="outlined" margin="normal">
             <InputLabel>Question Type</InputLabel>
-            <Select name="questionType" value={this.state.questionType} onChange={(e) => this.setState({ questionType: e.target.value, answer: e.target.value === 'MULTIPLE' ? [] : '' })} label="Question Type">
+            <Select 
+              name="questionType" 
+              value={this.state.questionType} 
+              onChange={(e) => this.setState({ questionType: e.target.value, answer: e.target.value === 'MULTIPLE' ? [] : '' })} 
+              label="Question Type"
+              disabled={this.state.targetClassName === 'JEE-Mains' || this.state.targetClassName === 'NEET'}
+            >
               <MenuItem value="SINGLE">Single Choice</MenuItem>
               <MenuItem value="MULTIPLE">Multiple Choice</MenuItem>
               <MenuItem value="NUMERICAL">Numerical Value</MenuItem>
             </Select>
+            {(this.state.targetClassName === 'JEE-Mains' || this.state.targetClassName === 'NEET') && (
+              <Typography variant="caption" color="textSecondary" style={{ marginTop: '5px' }}>
+                Question type is automatically set for {this.state.targetClassName} exams.
+              </Typography>
+            )}
           </FormControl>
 
           {this.state.questionType !== 'NUMERICAL' && [1, 2, 3, 4].map(num => (
@@ -270,7 +388,28 @@ class PaperSetup extends Component {
             </FormControl>
           )}
 
-          <TextField label="Marks" name="marks" type="number" value={this.state.marks} onChange={this.handleInputChange} margin="normal" variant="outlined" InputProps={{ inputProps: { min: 1 } }} />
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <TextField 
+              label="Marks" 
+              name="marks" 
+              type="number" 
+              value={this.state.marks} 
+              onChange={this.handleInputChange} 
+              margin="normal" 
+              variant="outlined" 
+              InputProps={{ inputProps: { min: 1 } }} 
+              style={{ flex: 1 }} 
+              disabled={this.props.targetClassName === 'JEE-Mains' || this.props.targetClassName === 'NEET'}
+            />
+            <FormControl variant="outlined" margin="normal" style={{ flex: 1 }}>
+              <InputLabel>Difficulty</InputLabel>
+              <Select name="difficulty" value={this.state.difficulty} onChange={this.handleInputChange} label="Difficulty">
+                <MenuItem value="EASY">Easy</MenuItem>
+                <MenuItem value="MEDIUM">Medium</MenuItem>
+                <MenuItem value="HARD">Hard</MenuItem>
+              </Select>
+            </FormControl>
+          </div>
           
           <TextField 
             label="Explanation (Optional)" 
@@ -347,7 +486,7 @@ class PaperSetup extends Component {
                   <img src={String(q.explanationImage).startsWith('http') ? q.explanationImage : apis.BASE + q.explanationImage} alt="explanation" style={{ maxHeight: '100px', display: 'block', marginTop: '10px', borderRadius: '4px' }} />
                 )}
                 <Typography variant="body2" color="textSecondary" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
-                  Marks: {q.marks} &nbsp;|&nbsp; Type: {q.questionType}
+                  Marks: {q.marks} &nbsp;|&nbsp; Type: {q.questionType} &nbsp;|&nbsp; Difficulty: {q.difficulty}
                 </Typography>
               </div>
             </div>

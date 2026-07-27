@@ -1,8 +1,8 @@
-import { Button, withStyles } from "@material-ui/core";
+import { Button, withStyles, Avatar, Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from "@material-ui/core";
 import React from "react";
 import { connect } from "react-redux";
 import { Navigate } from "react-router-dom";
-import { AppBar, Toolbar, Typography, Avatar, Box } from "@material-ui/core";
+import { AppBar, Toolbar } from "@material-ui/core";
 import Timer from "../../molecues/TestView/Timer";
 import QuestionList from "../../molecues/TestView/QuestionList";
 import TestQuestion from "../../molecues/TestView/TestQuestion";
@@ -168,16 +168,30 @@ class TestPage extends React.Component {
   constructor(props) {
     super(props);
     let initialStatuses = [];
+    let initialTimeSpent = [];
+    let initialRevisits = [];
+    
     if (this.props.taketest && this.props.taketest.answersheet && this.props.taketest.answersheet.answers) {
+      const numQuestions = this.props.taketest.answersheet.answers.length;
       initialStatuses = this.props.taketest.answersheet.answers.map(ans => ans !== null ? 2 : 0);
       if (initialStatuses.length > 0 && initialStatuses[0] === 0) {
         initialStatuses[0] = 1; // Mark first as Not Answered (visited)
+      }
+      
+      initialTimeSpent = Array(numQuestions).fill(0);
+      initialRevisits = Array(numQuestions).fill(0);
+      if (numQuestions > 0) {
+        initialRevisits[0] = 1; // First question is visited initially
       }
     }
 
     this.state = {
       curIndex: 0,
       questionStatuses: initialStatuses,
+      timeSpent: initialTimeSpent,
+      revisitCounts: initialRevisits,
+      lastSwitchTime: Date.now(),
+      rulesDialogOpen: true
     };
 
     this.handleContextMenu = this.handleContextMenu.bind(this);
@@ -237,6 +251,11 @@ class TestPage extends React.Component {
     document.addEventListener("copy", this.handleCopy);
     document.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
+
+    const testClassName = this.props.taketest?.test?.class?.name;
+    if (testClassName === 'JEE-Mains' || testClassName === 'NEET') {
+      this.setState({ rulesDialogOpen: true });
+    }
   }
 
   componentWillUnmount() {
@@ -254,13 +273,21 @@ class TestPage extends React.Component {
   }
 
   updateCurrentStatusAndGoNext(newStatus) {
-    const { curIndex, questionStatuses } = this.state;
+    const { curIndex, questionStatuses, timeSpent, revisitCounts, lastSwitchTime } = this.state;
     const newStatuses = [...questionStatuses];
     newStatuses[curIndex] = newStatus;
     
+    const newTimeSpent = [...timeSpent];
+    newTimeSpent[curIndex] += Math.floor((Date.now() - lastSwitchTime) / 1000);
+
     let nextIndex = curIndex + 1;
     if (nextIndex >= this.props.taketest.answersheet.answers.length) {
       nextIndex = 0; // Wrap around
+    }
+    
+    const newRevisits = [...revisitCounts];
+    if (nextIndex !== curIndex) {
+      newRevisits[nextIndex] += 1;
     }
     
     if (newStatuses[nextIndex] === 0) {
@@ -269,9 +296,12 @@ class TestPage extends React.Component {
 
     this.setState({
       questionStatuses: newStatuses,
-      curIndex: nextIndex
+      curIndex: nextIndex,
+      timeSpent: newTimeSpent,
+      revisitCounts: newRevisits,
+      lastSwitchTime: Date.now()
     }, () => {
-      this.props.saveAnswerAction(); // Save answer to backend
+      this.props.saveAnswerAction(this.state.timeSpent, this.state.revisitCounts); // Save answer to backend
     });
   }
 
@@ -308,18 +338,37 @@ class TestPage extends React.Component {
   }
 
   setCurIndex(x) {
-    const newStatuses = [...this.state.questionStatuses];
+    if (x === this.state.curIndex) return;
+
+    const { curIndex, questionStatuses, timeSpent, revisitCounts, lastSwitchTime } = this.state;
+    
+    const newTimeSpent = [...timeSpent];
+    newTimeSpent[curIndex] += Math.floor((Date.now() - lastSwitchTime) / 1000);
+    
+    const newRevisits = [...revisitCounts];
+    newRevisits[x] += 1;
+
+    const newStatuses = [...questionStatuses];
     if (newStatuses[x] === 0) {
       newStatuses[x] = 1; // Mark as visited
     }
     this.setState({
       curIndex: x,
-      questionStatuses: newStatuses
+      questionStatuses: newStatuses,
+      timeSpent: newTimeSpent,
+      revisitCounts: newRevisits,
+      lastSwitchTime: Date.now()
     });
   }
 
   endtest() {
-    this.props.endTestAction();
+    const { curIndex, timeSpent, lastSwitchTime, revisitCounts } = this.state;
+    const newTimeSpent = [...timeSpent];
+    newTimeSpent[curIndex] += Math.floor((Date.now() - lastSwitchTime) / 1000);
+    
+    this.setState({ timeSpent: newTimeSpent, lastSwitchTime: Date.now() }, () => {
+      this.props.endTestAction(this.state.timeSpent, this.state.revisitCounts);
+    });
   }
 
   render() {
@@ -337,7 +386,7 @@ class TestPage extends React.Component {
         <Box display="flex" justifyContent="flex-end" alignItems="center" className={classes.topBar} color="white">
           <Box display="flex" gap="10px">
             <Button style={{color: 'white', textTransform: 'none'}} size="small">Question Paper</Button>
-            <Button style={{color: 'white', textTransform: 'none'}} size="small">Instructions</Button>
+            <Button style={{color: 'white', textTransform: 'none'}} size="small" onClick={() => this.setState({ rulesDialogOpen: true })}>Instructions</Button>
           </Box>
         </Box>
 
@@ -353,6 +402,103 @@ class TestPage extends React.Component {
 
         {/* MAIN LAYOUT */}
         <div className={classes.mainArea} style={{ userSelect: 'none' }}>
+          <Dialog open={this.state.rulesDialogOpen} onClose={() => this.setState({ rulesDialogOpen: false })} maxWidth="md" fullWidth>
+            <DialogTitle style={{ backgroundColor: '#0f172a', color: '#fff' }}>
+              Exam Instructions: {this.props.taketest?.test?.title || 'Online Test'}
+            </DialogTitle>
+            <DialogContent dividers style={{ padding: '24px', backgroundColor: '#f8fafc' }}>
+              {(() => {
+                const className = (this.props.taketest?.test?.class?.name || 
+                                   this.props.taketest?.test?.targetClass?.name || 
+                                   this.props.taketest?.test?.targetClassName || '').toLowerCase();
+                const isJee = className.includes('jee');
+                const isNeet = className.includes('neet');
+                const totalQ = this.props.taketest?.test?.questions?.length || 0;
+                const durationMins = (this.props.taketest?.test?.duration || 0) / 60;
+
+                if (isJee) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <Typography variant="h6" style={{ color: '#0f172a', fontWeight: 'bold' }}>JEE-Mains Exam Pattern</Typography>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#2563eb', fontWeight: 'bold' }}>Physics (Q 1 - 25)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 1 - 20: Single Choice (+4 Correct / -1 Incorrect)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 21 - 25: Integer / Numerical Answer (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#059669', fontWeight: 'bold' }}>Chemistry (Q 26 - 50)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 26 - 45: Single Choice (+4 Correct / -1 Incorrect)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 46 - 50: Integer / Numerical Answer (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#d97706', fontWeight: 'bold' }}>Mathematics (Q 51 - 75)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 51 - 70: Single Choice (+4 Correct / -1 Incorrect)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• Q 71 - 75: Integer / Numerical Answer (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fef3c7', borderLeft: '4px solid #f59e0b', padding: '12px 16px', borderRadius: '4px' }}>
+                        <Typography variant="body2" style={{ color: '#92400e', fontWeight: '500' }}>
+                          <strong>Important Rules:</strong> Do not copy or switch tabs/windows. System warnings will be recorded. Click <strong>Submit Test</strong> when finished.
+                        </Typography>
+                      </div>
+                    </div>
+                  );
+                } else if (isNeet) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <Typography variant="h6" style={{ color: '#0f172a', fontWeight: 'bold' }}>NEET Exam Pattern</Typography>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#2563eb', fontWeight: 'bold' }}>Physics (Q 1 - 45)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• 45 Single Choice Questions (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#059669', fontWeight: 'bold' }}>Chemistry (Q 46 - 90)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• 45 Single Choice Questions (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#d97706', fontWeight: 'bold' }}>Biology (Q 91 - 180)</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• 90 Single Choice Questions (+4 Correct / -1 Incorrect)</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fef3c7', borderLeft: '4px solid #f59e0b', padding: '12px 16px', borderRadius: '4px' }}>
+                        <Typography variant="body2" style={{ color: '#92400e', fontWeight: '500' }}>
+                          <strong>Important Rules:</strong> Do not copy or switch tabs/windows. System warnings will be recorded. Click <strong>Submit Test</strong> when finished.
+                        </Typography>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <Typography variant="h6" style={{ color: '#0f172a', fontWeight: 'bold' }}>General Exam Instructions</Typography>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#0369a1', fontWeight: 'bold' }}>Test Summary & Structure</Typography>
+                        <Typography variant="body2" style={{ color: '#475569', marginTop: '4px' }}>• <strong>Total Questions:</strong> {totalQ || 'As displayed on screen'}</Typography>
+                        {durationMins > 0 && <Typography variant="body2" style={{ color: '#475569' }}>• <strong>Duration:</strong> {durationMins} Minutes</Typography>}
+                        <Typography variant="body2" style={{ color: '#475569' }}>• <strong>Marking Scheme:</strong> Each question carries marks as assigned. Read each question carefully before submitting.</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="subtitle2" style={{ color: '#475569', fontWeight: 'bold' }}>Question Palette Legend</Typography>
+                        <Typography variant="body2" style={{ color: '#475569', marginTop: '4px' }}>• 🟢 <strong>Green:</strong> Answered Question</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• 🔴 <strong>Red:</strong> Visited but Unanswered Question</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• 🟡 <strong>Yellow:</strong> Marked for Review</Typography>
+                        <Typography variant="body2" style={{ color: '#475569' }}>• ⚪ <strong>Grey:</strong> Not Visited</Typography>
+                      </div>
+                      <div style={{ backgroundColor: '#fef3c7', borderLeft: '4px solid #f59e0b', padding: '12px 16px', borderRadius: '4px' }}>
+                        <Typography variant="body2" style={{ color: '#92400e', fontWeight: '500' }}>
+                          <strong>Proctoring Notice:</strong> Do not leave full-screen mode or switch browser tabs. Warnings will be issued and logged automatically. Make sure to click <strong>Submit Test</strong> when you are done.
+                        </Typography>
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
+            </DialogContent>
+            <DialogActions style={{ padding: '16px 24px', backgroundColor: '#f1f5f9' }}>
+              <Button onClick={() => this.setState({ rulesDialogOpen: false })} color="primary" variant="contained" disableElevation>
+                I am ready to begin
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           {/* LEFT PANEL */}
           <div className={classes.leftPanel}>
             

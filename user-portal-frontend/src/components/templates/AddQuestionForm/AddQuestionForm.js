@@ -8,7 +8,7 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import { getSubjectDetails } from '../../../redux/actions/subjectAction';
 import { addQuestionAction } from "../../../redux/actions/questionAction";
-import { TextareaAutosize, MenuItem, Checkbox, ListItemText } from "@material-ui/core";
+import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography } from "@material-ui/core";
 
 
 
@@ -59,8 +59,14 @@ class AddQuestionForm extends React.Component {
       answer : "",
       questionType: "SINGLE",
       marks : 1,
+      difficulty: "MEDIUM",
       explanation : "",
       explanationImage: null,
+      bodyImage: null,
+      optImg1: null,
+      optImg2: null,
+      optImg3: null,
+      optImg4: null,
       fileInputKey: Date.now()
     }
   }
@@ -113,6 +119,13 @@ class AddQuestionForm extends React.Component {
     this.setState({ [e.target.name]: e.target.files[0] });
   };
 
+  handlePaste = (e, name) => {
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+      this.setState({ [name]: e.clipboardData.files[0] });
+      e.preventDefault();
+    }
+  };
+
   async handleSubmit(event) {
     event.preventDefault();
     const isAnswerInvalid = this.state.questionType === 'MULTIPLE' 
@@ -135,10 +148,16 @@ class AddQuestionForm extends React.Component {
     formData.append('body', this.state.body);
     formData.append('subject', this.state.subject);
     formData.append('marks', this.state.marks);
+    formData.append('difficulty', this.state.difficulty);
     formData.append('questionType', this.state.questionType);
     if(this.state.explanation !== '') formData.append('explanation', this.state.explanation);
     
+    if (this.state.bodyImage) formData.append('bodyImage', this.state.bodyImage);
     if (this.state.explanationImage) formData.append('explanationImage', this.state.explanationImage);
+    if (this.state.optImg1) formData.append('optImg1', this.state.optImg1);
+    if (this.state.optImg2) formData.append('optImg2', this.state.optImg2);
+    if (this.state.optImg3) formData.append('optImg3', this.state.optImg3);
+    if (this.state.optImg4) formData.append('optImg4', this.state.optImg4);
 
     if (this.state.questionType === 'MULTIPLE' && Array.isArray(this.state.answer)) {
       formData.append('answer', this.state.answer.join(','));
@@ -162,8 +181,14 @@ class AddQuestionForm extends React.Component {
         answer : "",
         questionType: "SINGLE",
         marks : 1,
+        difficulty: "MEDIUM",
         explanation : "",
         explanationImage: null,
+        bodyImage: null,
+        optImg1: null,
+        optImg2: null,
+        optImg3: null,
+        optImg4: null,
         fileInputKey: Date.now()
       });
     }
@@ -187,10 +212,14 @@ class AddQuestionForm extends React.Component {
           error_text=''
           value={this.state.body}
           onChange={(event)=>(this.bodyInputHandler(event))}
-          required
+          required={!this.state.bodyImage}
           fullWidth
         />
-
+        <div style={{ marginTop: '10px' }} onPaste={(e) => this.handlePaste(e, 'bodyImage')}>
+          <Typography variant="body2">Question Image (paste or select):</Typography>
+          <input key={this.state.fileInputKey + "body"} type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.bodyImage && <span style={{color: 'green'}}>Image attached!</span>}
+        </div>
         <br/>
         <InputLabel htmlFor='questionType-label' className={this.props.classes.optionInput}>Question Type</InputLabel>
         <Select
@@ -209,6 +238,7 @@ class AddQuestionForm extends React.Component {
 
         {this.state.questionType !== 'NUMERICAL' && (
           <React.Fragment>
+        <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
         <TextField
           variant='outlined'
           color="primary"
@@ -216,11 +246,18 @@ class AddQuestionForm extends React.Component {
           label="Option A"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[0]}
           onChange={(event)=>(this.optionInputHandler(event,0))}
-          required
+          required={!this.state.optImg1}
         />
+        <div onPaste={(e) => this.handlePaste(e, 'optImg1')}>
+          <Typography variant="body2">Image A (paste):</Typography>
+          <input key={this.state.fileInputKey + "opt1"} type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg1 && <span style={{color: 'green'}}>Attached!</span>}
+        </div>
+        </div>
+
+        <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
         <TextField
           variant='outlined'
           color="primary"
@@ -228,12 +265,18 @@ class AddQuestionForm extends React.Component {
           label="Option B"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[1]}
           onChange={(event)=>(this.optionInputHandler(event,1))}
-          required
+          required={!this.state.optImg2}
         />
-        <br/>
+        <div onPaste={(e) => this.handlePaste(e, 'optImg2')}>
+          <Typography variant="body2">Image B (paste):</Typography>
+          <input key={this.state.fileInputKey + "opt2"} type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg2 && <span style={{color: 'green'}}>Attached!</span>}
+        </div>
+        </div>
+
+        <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
         <TextField
           variant='outlined'
           color="primary"
@@ -241,11 +284,18 @@ class AddQuestionForm extends React.Component {
           label="Option C"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[2]}
           onChange={(event)=>(this.optionInputHandler(event,2))}
-          required
+          required={!this.state.optImg3}
         />
+        <div onPaste={(e) => this.handlePaste(e, 'optImg3')}>
+          <Typography variant="body2">Image C (paste):</Typography>
+          <input key={this.state.fileInputKey + "opt3"} type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg3 && <span style={{color: 'green'}}>Attached!</span>}
+        </div>
+        </div>
+
+        <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
         <TextField
           variant='outlined'
           color="primary"
@@ -253,11 +303,16 @@ class AddQuestionForm extends React.Component {
           label="Option D"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[3]}
           onChange={(event)=>(this.optionInputHandler(event,3))}
-          required
+          required={!this.state.optImg4}
         />
+        <div onPaste={(e) => this.handlePaste(e, 'optImg4')}>
+          <Typography variant="body2">Image D (paste):</Typography>
+          <input key={this.state.fileInputKey + "opt4"} type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg4 && <span style={{color: 'green'}}>Attached!</span>}
+        </div>
+        </div>
         <br/>
         </React.Fragment>
         )}
@@ -278,6 +333,19 @@ class AddQuestionForm extends React.Component {
             }
           }}
         />
+        <InputLabel htmlFor='difficulty-label' className={this.props.classes.optionInput}>Difficulty</InputLabel>
+        <Select
+          native
+          value={this.state.difficulty}
+          onChange={(event) => this.setState({ difficulty: event.target.value })}
+          label="Difficulty"
+          inputProps={{ name:'difficulty', id:'difficulty-label' }}
+          className={this.props.classes.optionInput}
+        >
+          <option value='EASY'>Easy</option>
+          <option value='MEDIUM'>Medium</option>
+          <option value='HARD'>Hard</option>
+        </Select>
         <br/>
         <InputLabel htmlFor='subject-label' className={this.props.classes.optionInput}>Subject</InputLabel>
         <Select
@@ -360,9 +428,10 @@ class AddQuestionForm extends React.Component {
           className={this.props.classes.textarea}
           minRows={3}
         />
-        <div style={{ marginTop: '15px' }}>
-          <Typography variant="body2">Explanation Image:</Typography>
-          <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+        <div style={{ marginTop: '15px' }} onPaste={(e) => this.handlePaste(e, 'explanationImage')}>
+          <Typography variant="body2">Explanation Image (paste or select):</Typography>
+          <input key={this.state.fileInputKey + "exp"} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.explanationImage && <span style={{color: 'green'}}>Image attached!</span>}
         </div>
         
         <div className={this.props.classes.btnContainer}>

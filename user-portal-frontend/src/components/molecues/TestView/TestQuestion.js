@@ -21,25 +21,45 @@ const useStyles = (theme) => ({
     justifyContent: "space-between",
     borderBottom: "1px solid #ddd",
     paddingBottom: "10px",
-    marginBottom: "15px"
+    marginBottom: "15px",
+    [theme.breakpoints.down('xs')]: {
+      paddingBottom: "6px",
+      marginBottom: "10px",
+    }
   },
   marksText: {
     color: "#d32f2f",
     fontWeight: "bold",
     fontSize: "13px",
     display: 'flex',
-    alignItems: 'center'
+    alignItems: 'center',
+    [theme.breakpoints.down('xs')]: {
+      fontSize: "11px",
+    }
   },
   questionNumberText: {
     fontWeight: "bold",
     fontSize: "18px",
     marginBottom: "10px",
-    color: '#333'
+    color: '#333',
+    [theme.breakpoints.down('xs')]: {
+      fontSize: "16px",
+      marginBottom: "6px",
+    }
   },
   quebody: {
     marginBottom: "20px",
     fontSize: "17px",
-    lineHeight: "1.6"
+    lineHeight: "1.6",
+    [theme.breakpoints.down('xs')]: {
+      marginBottom: "14px",
+      fontSize: "15px",
+      lineHeight: "1.5",
+      '& img': {
+        maxWidth: '100%',
+        height: 'auto',
+      }
+    }
   },
   options: {
     width: '100%'
@@ -52,6 +72,14 @@ const useStyles = (theme) => ({
     fontSize: "16px",
     '&:hover': {
       backgroundColor: '#f9f9f9'
+    },
+    [theme.breakpoints.down('xs')]: {
+      padding: '8px 6px',
+      marginBottom: '6px',
+      fontSize: "14px",
+      '& img': {
+        maxHeight: '60px',
+      }
     }
   }
 });
@@ -135,7 +163,7 @@ class TestQuestion extends React.Component {
                 style={{ marginBottom: '10px', backgroundColor: '#fff' }} 
                 inputProps={{ style: { textAlign: 'center', fontSize: '20px', color: '#000' } }}
               />
-              <div style={{ display: 'flex', flexDirection: 'column', width: '200px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '220px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <KeypadButton onClick={() => this.handleKeypad('7')}>7</KeypadButton>
                   <KeypadButton onClick={() => this.handleKeypad('8')}>8</KeypadButton>

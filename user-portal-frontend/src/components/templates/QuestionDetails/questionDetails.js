@@ -68,7 +68,7 @@ class QuestionDetails extends React.Component {
 
         {selectedTest && (
           <div style={{ marginTop: '20px', textAlign: 'left' }}>
-            <PaperSetup testId={selectedTest._id} targetSubject={selectedTest.subjects ? selectedTest.subjects[0] : null} hideFinishButton={true} />
+            <PaperSetup testId={selectedTest._id} targetSubject={selectedTest.subjects ? selectedTest.subjects[0] : null} targetClassName={selectedTest.targetClass ? selectedTest.targetClass.name : null} hideFinishButton={true} />
             <div style={{ marginTop: '40px' }}>
               <PaperPreview testId={selectedTest._id} hideFinishButton={true} />
             </div>

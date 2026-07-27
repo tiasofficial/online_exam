@@ -149,7 +149,10 @@ class TestTable extends React.Component {
             
             html += `
               <div class="question-block">
-                <div class="q-header">Q${index + 1}. ${q.body || ''}</div>
+                <div class="q-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <div style="flex: 1;">Q${index + 1}. ${q.body || ''}</div>
+                  <div style="padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; margin-left: 15px; background-color: ${q.difficulty === 'EASY' ? '#e8f5e9' : q.difficulty === 'HARD' ? '#ffebee' : '#fff8e1'}; color: ${q.difficulty === 'EASY' ? '#2e7d32' : q.difficulty === 'HARD' ? '#c62828' : '#f57f17'}; white-space: nowrap;">${q.difficulty || 'MEDIUM'}</div>
+                </div>
                 ${q.bodyImage && q.bodyImage !== 'null' && q.bodyImage !== 'undefined' && String(q.bodyImage).trim() !== '' ? `<img class="q-image" src="${getImageUrl(q.bodyImage)}" />` : ''}
                 
                 <div class="ans-row">
@@ -160,6 +163,17 @@ class TestTable extends React.Component {
                   <div class="ans-col">
                     <div class="ans-title">Student's Answer</div>
                     <div style="font-size: 16px;">${studentAnswerHtml}</div>
+                  </div>
+                </div>
+                
+                <div class="ans-row" style="margin-top: 10px;">
+                  <div class="ans-col" style="background: #e3f2fd; border: 1px solid #bbdefb;">
+                    <div class="ans-title" style="color: #1976d2;">Time Spent</div>
+                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.timeSpent && data.timeSpent[index] ? parseFloat(data.timeSpent[index]).toFixed(1) : 0} seconds</div>
+                  </div>
+                  <div class="ans-col" style="background: #e3f2fd; border: 1px solid #bbdefb;">
+                    <div class="ans-title" style="color: #1976d2;">Revisits</div>
+                    <div style="font-size: 15px; font-weight: 500; color: #0d47a1;">${data.revisitCounts && data.revisitCounts[index] ? data.revisitCounts[index] : 0}</div>
                   </div>
                 </div>
             `;

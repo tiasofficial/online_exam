@@ -35,12 +35,10 @@ const TeacherDashboard = ({ setAlert }) => {
   
   // Data State
   const [students, setStudents] = useState([]);
-  const [classesList, setClassesList] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
   // Dialog State
   const [openStudent, setOpenStudent] = useState(false);
-  const [openClass, setOpenClass] = useState(false);
   const [openSubject, setOpenSubject] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -51,7 +49,6 @@ const TeacherDashboard = ({ setAlert }) => {
 
   useEffect(() => {
     fetchStudents();
-    fetchClasses();
     fetchSubjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -67,12 +64,6 @@ const TeacherDashboard = ({ setAlert }) => {
     try {
       const res = await axios.get(apis.BASE + apis.GET_ALL_STUDENTS_TEACHER, { headers });
       if(res.data.success) setStudents(res.data.students);
-    } catch(err) { console.log(err); }
-  };
-  const fetchClasses = async () => {
-    try {
-      const res = await axios.get(apis.BASE + apis.GET_CLASSES, { headers });
-      if(res.data.success) setClassesList(res.data.classes);
     } catch(err) { console.log(err); }
   };
   const fetchSubjects = async () => {
@@ -97,18 +88,6 @@ const TeacherDashboard = ({ setAlert }) => {
     setFormEmail(student.email);
     setFormPassword('');
     setOpenStudent(true);
-  };
-
-  const handleAddClass = () => {
-    setEditingId(null);
-    setFormName('');
-    setOpenClass(true);
-  };
-
-  const handleEditClass = (cls) => {
-    setEditingId(cls._id);
-    setFormName(cls.name);
-    setOpenClass(true);
   };
 
   const handleAddSubject = () => {
@@ -144,26 +123,6 @@ const TeacherDashboard = ({ setAlert }) => {
     } catch(err) { setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to save student' }); }
   };
 
-  const saveClass = async () => {
-    try {
-      const payload = { name: formName };
-      let res;
-      if(editingId) {
-        payload.classId = editingId;
-        res = await axios.post(apis.BASE + apis.UPDATE_CLASS, payload, { headers });
-      } else {
-        res = await axios.post(apis.BASE + apis.CREATE_CLASS, payload, { headers });
-      }
-      if(res.data.success) {
-        setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message });
-        setOpenClass(false);
-        fetchClasses();
-      } else {
-        setAlert({ isAlert: true, type: 'error', title: 'Error', message: res.data.message });
-      }
-    } catch(err) { setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to save class' }); }
-  };
-
   const saveSubject = async () => {
     try {
       const payload = { name: formName };
@@ -188,22 +147,33 @@ const TeacherDashboard = ({ setAlert }) => {
   const deleteStudent = async (id) => {
     try {
       const res = await axios.post(apis.BASE + apis.DELETE_STUDENT, { studentId: id }, { headers });
-      if(res.data.success) { fetchStudents(); setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message }); }
-    } catch(err) { console.log(err); }
-  };
-
-  const deleteClass = async (id) => {
-    try {
-      const res = await axios.post(apis.BASE + apis.DELETE_CLASS, { classId: id }, { headers });
-      if(res.data.success) { fetchClasses(); setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message }); }
-    } catch(err) { console.log(err); }
+      if(res.data.success) { 
+        setStudents(prev => prev.filter(s => s.id !== id));
+        fetchStudents(); 
+        setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message }); 
+      } else {
+        setAlert({ isAlert: true, type: 'error', title: 'Error', message: res.data.message });
+      }
+    } catch(err) { 
+      console.log(err); 
+      setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to delete student' });
+    }
   };
 
   const deleteSubject = async (id) => {
     try {
       const res = await axios.post(apis.BASE + apis.DELETE_SUBJECT, { subjectId: id }, { headers });
-      if(res.data.success) { fetchSubjects(); setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message }); }
-    } catch(err) { console.log(err); }
+      if(res.data.success) { 
+        setSubjects(prev => prev.filter(s => s.id !== id));
+        fetchSubjects(); 
+        setAlert({ isAlert: true, type: 'success', title: 'Success', message: res.data.message }); 
+      } else {
+        setAlert({ isAlert: true, type: 'error', title: 'Error', message: res.data.message });
+      }
+    } catch(err) { 
+      console.log(err); 
+      setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to delete subject' });
+    }
   };
 
   return (
@@ -213,7 +183,6 @@ const TeacherDashboard = ({ setAlert }) => {
       <Paper>
         <Tabs value={tabValue} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
           <Tab label="Students" />
-          <Tab label="Classes" />
           <Tab label="Subjects" />
         </Tabs>
       </Paper>
@@ -236,26 +205,8 @@ const TeacherDashboard = ({ setAlert }) => {
         </Paper>
       </TabPanel>
 
-      {/* CLASSES TAB */}
-      <TabPanel value={tabValue} index={1}>
-        <Button variant="contained" color="primary" onClick={handleAddClass} style={{ marginBottom: 15 }}>Add Class</Button>
-        <Paper>
-          <List>
-            {classesList.map(c => (
-              <ListItem key={c._id} divider>
-                <ListItemText primary={c.name} />
-                <ListItemSecondaryAction>
-                  <IconButton edge="end" onClick={() => handleEditClass(c)}><EditIcon /></IconButton>
-                  <IconButton edge="end" onClick={() => deleteClass(c._id)}><DeleteIcon /></IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      </TabPanel>
-
       {/* SUBJECTS TAB */}
-      <TabPanel value={tabValue} index={2}>
+      <TabPanel value={tabValue} index={1}>
         <Button variant="contained" color="primary" onClick={handleAddSubject} style={{ marginBottom: 15 }}>Add Subject</Button>
         <Paper>
           <List>
@@ -283,18 +234,6 @@ const TeacherDashboard = ({ setAlert }) => {
         <DialogActions>
           <Button onClick={() => setOpenStudent(false)}>Cancel</Button>
           <Button onClick={saveStudent} color="primary">Save</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Class Dialog */}
-      <Dialog open={openClass} onClose={() => setOpenClass(false)} fullWidth>
-        <DialogTitle>{editingId ? "Edit Class" : "Add Class"}</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" label="Class Name" type="text" fullWidth value={formName} onChange={e => setFormName(e.target.value)} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenClass(false)}>Cancel</Button>
-          <Button onClick={saveClass} color="primary">Save</Button>
         </DialogActions>
       </Dialog>
 

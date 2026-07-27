@@ -8,7 +8,8 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import { getSubjectDetails } from '../../../redux/actions/subjectAction';
 import { updateQuestionAction } from "../../../redux/actions/questionAction";
-import { TextareaAutosize, MenuItem, Checkbox, ListItemText } from "@material-ui/core";
+import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography } from "@material-ui/core";
+import { apis } from "../../../environments/environment";
 
 
 
@@ -62,6 +63,7 @@ class ViewnUpdateQuestion extends React.Component {
       questionType: this.props.question.questionType || 'SINGLE',
       answer : this.props.question.answer === '' ? 'None' : this.props.question.answer,
       marks : this.props.question.marks,
+      difficulty: this.props.question.difficulty || 'MEDIUM',
       explanation : this.props.question.explanation || "",
       explanationImage: this.props.question.explanationImage || null,
       fileInputKey: Date.now(),
@@ -79,6 +81,13 @@ class ViewnUpdateQuestion extends React.Component {
       [event.target.name]: event.target.files[0]
     });
   }
+
+  handlePaste = (e, name) => {
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+      this.setState({ [name]: e.clipboardData.files[0] });
+      e.preventDefault();
+    }
+  };
 
   bodyInputHandler = (event) => {
     this.setState({
@@ -157,6 +166,7 @@ class ViewnUpdateQuestion extends React.Component {
     formData.append('body', this.state.body);
     formData.append('subject', this.state.subject);
     formData.append('marks', this.state.marks);
+    formData.append('difficulty', this.state.difficulty);
     formData.append('questionType', this.state.questionType);
     if (this.state.explanation !== '') formData.append('explanation', this.state.explanation);
     
@@ -209,10 +219,14 @@ class ViewnUpdateQuestion extends React.Component {
           required
           fullWidth
         />
-        <div style={{ marginTop: '10px', textAlign: 'left', marginLeft: '20px' }}>
-          <label>Or Upload Question Image: </label>
+        <div style={{ marginTop: '10px', textAlign: 'left', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'bodyImage')}>
+          <Typography variant="body2">Or Upload Question Image (paste or select): </Typography>
           <input type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
-          {this.props.question.bodyImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>}
+          {this.state.bodyImage ? (
+             <span style={{color: 'green'}}>New Image attached!</span>
+          ) : (
+             this.props.question.bodyImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>
+          )}
         </div>
         <br/>
         <InputLabel htmlFor='questionType-label' className={this.props.classes.optionInput}>Question Type</InputLabel>
@@ -240,13 +254,13 @@ class ViewnUpdateQuestion extends React.Component {
           label="Option A"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[0]}
           onChange={(event)=>(this.optionInputHandler(event,0))}
         />
-        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
-          <label>Image: </label>
+        <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg1')}>
+          <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg1 && <span style={{color: 'green'}}>Attached!</span>}
         </div>
         </div>
         
@@ -258,13 +272,13 @@ class ViewnUpdateQuestion extends React.Component {
           label="Option B"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[1]}
           onChange={(event)=>(this.optionInputHandler(event,1))}
         />
-        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
-          <label>Image: </label>
+        <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg2')}>
+          <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg2 && <span style={{color: 'green'}}>Attached!</span>}
         </div>
         </div>
         
@@ -276,13 +290,13 @@ class ViewnUpdateQuestion extends React.Component {
           label="Option C"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[2]}
           onChange={(event)=>(this.optionInputHandler(event,2))}
         />
-        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
-          <label>Image: </label>
+        <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg3')}>
+          <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg3 && <span style={{color: 'green'}}>Attached!</span>}
         </div>
         </div>
         
@@ -294,13 +308,13 @@ class ViewnUpdateQuestion extends React.Component {
           label="Option D"
           placeholder='enter option'
           type='text'
-          error_text=''
           value={this.state.options[3]}
           onChange={(event)=>(this.optionInputHandler(event,3))}
         />
-        <div style={{ display: 'inline-block', marginLeft: '20px' }}>
-          <label>Image: </label>
+        <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg4')}>
+          <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.optImg4 && <span style={{color: 'green'}}>Attached!</span>}
         </div>
         </div>
         <br/>
@@ -323,6 +337,19 @@ class ViewnUpdateQuestion extends React.Component {
             }
           }}
         />
+        <InputLabel htmlFor='difficulty-label' className={this.props.classes.optionInput}>Difficulty</InputLabel>
+        <Select
+          native
+          value={this.state.difficulty}
+          onChange={(event) => this.setState({ difficulty: event.target.value })}
+          label="Difficulty"
+          inputProps={{ name:'difficulty', id:'difficulty-label' }}
+          className={this.props.classes.optionInput}
+        >
+          <option value='EASY'>Easy</option>
+          <option value='MEDIUM'>Medium</option>
+          <option value='HARD'>Hard</option>
+        </Select>
         <br/>
         <InputLabel htmlFor='subject-label' className={this.props.classes.optionInput}>Subject</InputLabel>
         <Select
@@ -404,12 +431,13 @@ class ViewnUpdateQuestion extends React.Component {
           className={this.props.classes.textarea}
           minRows={3}
         />
-        <div style={{ marginTop: '15px' }}>
-          <Typography variant="body2">Explanation Image:</Typography>
+        <div style={{ marginTop: '15px' }} onPaste={(e) => this.handlePaste(e, 'explanationImage')}>
+          <Typography variant="body2">Explanation Image (paste or select):</Typography>
           {this.state.explanationImage && typeof this.state.explanationImage === 'string' && (
             <img src={this.state.explanationImage.startsWith('http') ? this.state.explanationImage : apis.BASE + this.state.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
           )}
           <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
+          {this.state.explanationImage && typeof this.state.explanationImage !== 'string' && <span style={{color: 'green'}}>New image attached!</span>}
         </div>
         
         <div className={this.props.classes.btnContainer}>

@@ -135,6 +135,11 @@ class PaperPreview extends Component {
       }
     }
 
+    if (!this.state.editData.answer || (typeof this.state.editData.answer === 'string' && this.state.editData.answer.trim() === '') || (Array.isArray(this.state.editData.answer) && this.state.editData.answer.length === 0)) {
+      this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Please select or provide a correct answer.' });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('questionId', this.state.editingQuestion._id);
     formData.append('testId', this.props.testId);

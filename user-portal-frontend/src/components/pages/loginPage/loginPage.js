@@ -1,24 +1,104 @@
-import { Button, withStyles } from '@material-ui/core';
+import { Button, withStyles, Grid, Paper, Box, Typography } from '@material-ui/core';
 import React from 'react';
 import { connect } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import AlertBox from '../../atoms/Alertbox/AlertBox';
 import LoginForm from '../../templates/loginForm/loginForm';
 import Auth from '../../../helper/Auth';
-import { AppBar, Toolbar, Typography } from '@material-ui/core';
 
 const useStyles = (theme) => ({
-  addHeight : theme.mixins.toolbar,
-  title : {
-    flexGrow : 1
+  root: {
+    minHeight: '100vh',
+    display: 'flex',
+    overflow: 'hidden',
+    backgroundColor: '#f8fafc',
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'column',
+      overflow: 'auto',
+    }
   },
-  main : {
-    textAlign : 'center',
-    paddingTop : '5%',
-    margin : 'auto'
+  leftSide: {
+    flex: 1,
+    background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(6),
+    color: '#fff',
+    [theme.breakpoints.down('sm')]: {
+      display: 'none',
+    }
+  },
+  rightSide: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    position: 'relative'
+  },
+  titleText: {
+    fontWeight: 900,
+    fontSize: '3.5rem',
+    marginBottom: theme.spacing(3),
+    textAlign: 'center',
+    textShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    lineHeight: 1.2
+  },
+  subtitleText: {
+    fontSize: '1.25rem',
+    maxWidth: '500px',
+    textAlign: 'center',
+    lineHeight: 1.6,
+    opacity: 0.9
+  },
+  glassCard: {
+    background: '#ffffff',
+    borderRadius: '24px',
+    padding: theme.spacing(6),
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05)',
+    width: '100%',
+    maxWidth: '450px',
+    zIndex: 10,
+    [theme.breakpoints.down('xs')]: {
+      padding: theme.spacing(4),
+      borderRadius: '20px',
+      margin: theme.spacing(2),
+      maxWidth: 'calc(100% - 32px)',
+      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+    }
+  },
+  mobileHeader: {
+    display: 'none',
+    [theme.breakpoints.down('sm')]: {
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      padding: theme.spacing(6, 2),
+      background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
+      color: '#fff',
+      textAlign: 'center',
+      borderRadius: '0 0 32px 32px',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+    }
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 20,
+    textAlign: 'center',
+    width: '100%',
+    [theme.breakpoints.down('sm')]: {
+      position: 'relative',
+      marginTop: 'auto',
+      paddingBottom: '20px',
+      paddingTop: '40px'
+    }
   }
 })
-
 
 class LoginPage extends React.Component {
   constructor(props) {
@@ -35,7 +115,6 @@ class LoginPage extends React.Component {
     })
   }
 
-
   render(){
     if(this.state.gotoStudentRegister) {
       return (<Navigate to='/studentRegisterPage'/>)
@@ -46,43 +125,44 @@ class LoginPage extends React.Component {
       else
         return (<Navigate to='/homeStudent'/>);
     } else if(Auth.retriveToken() && Auth.retriveToken()!=='undefined'){
-      
       return (<Navigate to='/homeStudent'/>);
     } 
     else {
       return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1 }}>
-            <AppBar
-            elevation={0}
-            className={this.props.classes.appbar}
-            >
-              <Toolbar style={{ display: 'flex', justifyContent: 'center' }}>
-                    <Typography variant='h5' component='h1' style={{ fontWeight: 'bold' }}>
-                      COMPUTER BASED TEST (CBT) EXAM PORTAL - SILIGURI
-                    </Typography>
-              </Toolbar>
-            </AppBar>
-            <div className={this.props.classes.addHeight}></div>
-            <div className={this.props.classes.main}>
-            <AlertBox/>
-            <LoginForm/>
-            
-            <div style={{ marginTop: '40px', padding: '0 20px', color: '#555', textAlign: 'center', maxWidth: '800px', margin: '40px auto 0 auto' }}>
-              <Typography variant="h2" style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                What is a Computer-Based Test (CBT)? Practice Online for NEET & JEE
-              </Typography>
-              <Typography variant="body2" paragraph style={{ lineHeight: '1.6' }}>
-                A <strong>Computer-Based Test (CBT)</strong> is a digital form of assessment where candidates complete tests via a computer. Welcome to Siliguri's top <strong>CBT online exam portal</strong>. 
-                Our platform provides demo model papers and premium mock tests to help you prepare for your exams with confidence. 
-                Whether you need a <strong>NEET exam portal</strong> or a <strong>JEE exam portal</strong>, our CBT platform offers instant results, detailed analytics, and a true-to-life exam environment.
-              </Typography>
-            </div>
-            
-            </div>
+        <div className={this.props.classes.root}>
+          {/* Desktop Left Side */}
+          <div className={this.props.classes.leftSide}>
+            <Typography className={this.props.classes.titleText}>
+              CBT Exam Portal
+            </Typography>
+            <Typography className={this.props.classes.subtitleText}>
+              Platform for NEET & JEE mock tests. Practice online with real exam environments and detailed analytics.
+            </Typography>
           </div>
-          <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' }}>
-            Designed and developed by <a href="https://www.tiastech.in/" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'none', color: '#007bff'}}>TIAS</a>
+          
+          {/* Right Side / Mobile Full */}
+          <div className={this.props.classes.rightSide}>
+            {/* Mobile Header (Hidden on Desktop) */}
+            <div className={this.props.classes.mobileHeader}>
+               <Typography variant="h4" style={{fontWeight: 800, textShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>CBT Portal</Typography>
+               <Typography variant="body1" style={{opacity: 0.9, marginTop: '8px'}}>Practice Online for NEET & JEE</Typography>
+            </div>
+
+            {/* Login Card */}
+            <div className={this.props.classes.glassCard} style={{ marginTop: window.innerWidth <= 960 ? '-40px' : '0' }}>
+              <AlertBox/>
+              <LoginForm/>
+              
+              <Box mt={4} textAlign="center">
+              </Box>
+            </div>
+            
+            {/* Footer */}
+            <div className={this.props.classes.footer}>
+              <Typography variant="body2" style={{ color: '#64748b' }}>
+                Designed and developed by <a href="https://www.tiastech.in/" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'none', color: '#3b82f6', fontWeight: 'bold'}}>TIAS</a>
+              </Typography>
+            </div>
           </div>
         </div>
       )
@@ -92,6 +172,6 @@ class LoginPage extends React.Component {
 
 const mapStatetoProps = state=>({
   user : state.user
-});
+})
 
 export default withStyles(useStyles)(connect(mapStatetoProps,{})(LoginPage));

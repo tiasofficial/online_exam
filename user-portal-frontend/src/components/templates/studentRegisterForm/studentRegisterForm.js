@@ -6,13 +6,20 @@ import { registerStudentAction } from "../../../redux/actions/registerStudentAct
 import { connect } from "react-redux";
 import { setAlert } from "../../../redux/actions/alertAction";
 
-const useStyles = ()=>({
+const useStyles = (theme)=>({
   inputfield : {
     display:'block',
-    margin :'20px'
+    margin :'20px',
+    [theme.breakpoints.down('xs')]: {
+      margin: '14px 10px',
+    }
   },
   btn : {
-    margin : '0px 40px'
+    margin : '0px 40px',
+    [theme.breakpoints.down('xs')]: {
+      margin: '0 10px',
+      width: 'calc(100% - 20px)',
+    }
   },
   formClass : {
     margin:'20px',
@@ -20,11 +27,22 @@ const useStyles = ()=>({
     textAlign : 'center',
     border : '1px solid black',
     borderRadius: '10px',
-    padding : '20px'
+    padding : '20px',
+    boxSizing: 'border-box',
+    maxWidth: '400px',
+    width: '90%',
+    [theme.breakpoints.down('xs')]: {
+      width: '94%',
+      margin: '10px auto',
+      padding: '16px 12px',
+    }
   },
   
   formTitle:{
-    fontSize: '1.7em'
+    fontSize: '1.7em',
+    [theme.breakpoints.down('xs')]: {
+      fontSize: '1.3em',
+    }
   }
 })
 

@@ -7,13 +7,38 @@ import { withStyles } from "@material-ui/core/styles";
 import { loginRequestAction } from "../../../redux/actions/loginAction";
 import { connect } from "react-redux";
 
-const useStyles = ()=>({
+const useStyles = (theme)=>({
   inputfield : {
     display:'block',
-    margin :'20px'
+    marginBottom :'24px',
+    width: '100%',
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '12px',
+      backgroundColor: '#f8fafc',
+      '& fieldset': {
+        borderColor: '#e2e8f0',
+      },
+      '&:hover fieldset': {
+        borderColor: '#94a3b8',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#3b82f6',
+      },
+    }
   },
   loginbtn : {
-    margin : '0px 40px'
+    width: '100%',
+    padding: '14px',
+    borderRadius: '12px',
+    fontSize: '1.1rem',
+    fontWeight: 'bold',
+    textTransform: 'none',
+    backgroundColor: '#3b82f6',
+    color: '#fff',
+    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.4)',
+    '&:hover': {
+      backgroundColor: '#2563eb',
+    }
   }
 })
 
@@ -51,39 +76,40 @@ class LoginForm extends React.Component {
   render() {
     return (
       <form className="form-class" onSubmit={this.handleSubmit}>
-        <div className="form-title" color="primary">LOGIN</div>
+        <div className="form-title">Welcome Back</div>
+        <div style={{ color: '#64748b', marginBottom: '32px', textAlign: 'center', fontSize: '1rem' }}>
+          Please enter your details to sign in
+        </div>
+        
         <TextField
           variant='outlined'
-          color="primary"
           className={this.props.classes.inputfield}
-          label="Email"
-          placeholder='enter email'
+          label="Email Address"
+          placeholder='Enter your email'
           type='email'
-          error_text=''
           value={this.state.email}
           onChange={this.emailInputHandler}
           required
+          InputLabelProps={{ style: { color: '#64748b' } }}
         />
         <TextField
           variant='outlined'
-          color="primary"
           label="Password"
           className={this.props.classes.inputfield}
-          placeholder='enter password'
+          placeholder='Enter your password'
           type='password'
-          error_text=''
           value={this.state.password}
           onChange={this.passwordInputHandler}
           required
+          InputLabelProps={{ style: { color: '#64748b' } }}
         />
         <Button 
           variant='contained'
-          color="primary"
           type='submit'
           className={this.props.classes.loginbtn}
           disabled={this.state.isLoading}
         >
-          {this.state.isLoading ? <CircularProgress size={24} /> : "Login"}
+          {this.state.isLoading ? <CircularProgress size={24} style={{ color: 'white' }} /> : "Sign In"}
         </Button>
       </form>
     )
@@ -91,10 +117,7 @@ class LoginForm extends React.Component {
 }
 
 const mapStatetoProps = state => ({
-  state : state.user
+  state: state.user
 })
 
-export default withStyles(useStyles)(connect(mapStatetoProps,{
-  loginRequestAction
-})(LoginForm));
-
+export default withStyles(useStyles)(connect(mapStatetoProps, { loginRequestAction })(LoginForm));

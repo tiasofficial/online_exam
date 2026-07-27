@@ -10,6 +10,7 @@ import AlertBox from '../../atoms/Alertbox/AlertBox';
 import TestDetailsStudent from "../../templates/TestDetails/TestDetailsStudent";
 import UpcomingStudentTestsDetails from "../../templates/TestDetails/UpcomingStudentTestsDetails";
 import CompletedTestsDetailsStudent from "../../templates/TestDetails/CompletedTestsDetailsStudent";
+import StudentDashboard from "../../templates/StudentDashboard/StudentDashboard";
 
 const drawerWidth = 200
 const appbarHeight = 64
@@ -34,15 +35,24 @@ const useStyles = (theme)=>({
     width: '100%',
     [theme.breakpoints.up('sm')]: {
       maxWidth: `calc(100% - ${drawerWidth}px)`
+    },
+    [theme.breakpoints.down('xs')]: {
+      padding: theme.spacing(1),
     }
   },
   addHeight : theme.mixins.toolbar,
   title : {
-    flexGrow : 1
+    flexGrow : 1,
+    [theme.breakpoints.down('xs')]: {
+      fontSize: '1.1rem',
+    }
   },
   appbar : {
     height : appbarHeight,
-    zIndex: theme.zIndex.drawer + 1
+    zIndex: theme.zIndex.drawer + 1,
+    [theme.breakpoints.down('xs')]: {
+      height: 56,
+    }
   },
   menuButton: {
     marginRight: theme.spacing(2),
@@ -62,10 +72,10 @@ class StudentHomepage extends React.Component{
   constructor(props) {
     super(props);
     this.state = {
-      content:(<div>Welcome to Exam portal</div>),
+      content:(<StudentDashboard/>),
       menuList:[{
-        title:'Home',
-        content:(<div>Welcome to Exam portal</div>)
+        title:'Home Dashboard',
+        content:(<StudentDashboard/>)
       },{
         title : 'View All tests',
         content:<TestDetailsStudent/>
