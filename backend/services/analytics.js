@@ -7,21 +7,31 @@ const subjectModel = require("../models/subject");
 
 
 const getStudentDashboardAnalytics = async (req, res, next) => {
+  console.log("=== getStudentDashboardAnalytics called ===");
   var creator = req.user || null;
   if(creator == null || req.user.usertype != 'STUDENT') {
+    console.log("Unauthorized or not a student");
     return res.status(401).json({ success: false, message: "Permissions not granted!" });
   }
 
   try {
+    console.log("Fetching answersheets for student:", creator._id);
     const answersheets = await answersheetModel.find({ student: creator._id, completed: true });
+    console.log("Answersheets found:", answersheets.length);
 
     if (!answersheets || answersheets.length === 0) {
+      console.log("Returning empty data (no answersheets)");
       return res.json({ success: true, data: [] });
     }
 
     const testItemPromises = answersheets.map(async (answersheet) => {
+      console.log("Processing answersheet:", answersheet._id, "Test ID:", answersheet.test);
       const test = await testModel.findById(answersheet.test).populate('targetClass');
-      if (!test) return null;
+      if (!test) {
+        console.log("Test not found in DB for ID:", answersheet.test);
+        return null;
+      }
+      console.log("Test found:", test.title, "Questions length:", test.questions ? test.questions.length : 0);
 
       const questions = await questionModel.find({ _id: { $in: test.questions } }).populate('subject');
       
@@ -114,6 +124,9 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         }
       }
 
+      console.log("Finished questions loop for test", test.title);
+      console.log("Total Possible Marks:", totalPossibleMarks);
+
       for (let sub in subjects) {
         let stat = subjects[sub];
         stat.accuracy = stat.totalPossibleMarks > 0 ? (stat.obtainedMarks / stat.totalPossibleMarks) : 0;
@@ -140,11 +153,13 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
 
     const testItems = await Promise.all(testItemPromises);
     const validTestItems = testItems.filter(t => t !== null);
+    
+    console.log("Final validTestItems length:", validTestItems.length);
 
     res.json({ success: true, data: validTestItems });
 
   } catch(err) {
-    console.log(err);
+    console.error("Error in getStudentDashboardAnalytics:", err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
