@@ -8,7 +8,8 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import { getSubjectDetails } from '../../../redux/actions/subjectAction';
 import { addQuestionAction } from "../../../redux/actions/questionAction";
-import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography } from "@material-ui/core";
+import { TextareaAutosize, MenuItem, Checkbox, ListItemText, Typography, CircularProgress, IconButton } from "@material-ui/core";
+import CloseIcon from '@material-ui/icons/Close';
 
 
 
@@ -67,7 +68,8 @@ class AddQuestionForm extends React.Component {
       optImg2: null,
       optImg3: null,
       optImg4: null,
-      fileInputKey: Date.now()
+      fileInputKey: Date.now(),
+      submitting: false
     }
   }
 
@@ -187,6 +189,7 @@ class AddQuestionForm extends React.Component {
       formData.append('option4', this.state.options[3]);
     }
     
+    this.setState({ submitting: true });
     const success = await this.props.addQuestionAction(formData);
     if (success) {
       this.setState({
@@ -204,8 +207,11 @@ class AddQuestionForm extends React.Component {
         optImg2: null,
         optImg3: null,
         optImg4: null,
-        fileInputKey: Date.now()
+        fileInputKey: Date.now(),
+        submitting: false
       });
+    } else {
+      this.setState({ submitting: false });
     }
   }
 
@@ -233,7 +239,14 @@ class AddQuestionForm extends React.Component {
         <div style={{ marginTop: '10px' }} onPaste={(e) => this.handlePaste(e, 'bodyImage')}>
           <Typography variant="body2">Question Image (paste or select):</Typography>
           <input key={this.state.fileInputKey + "body"} type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.bodyImage && <span style={{color: 'green'}}>Image attached!</span>}
+          {this.state.bodyImage && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Image attached: {this.state.bodyImage.name || 'Pasted Image'}</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ bodyImage: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         <br/>
         <InputLabel htmlFor='questionType-label' className={this.props.classes.optionInput}>Question Type</InputLabel>
@@ -268,7 +281,14 @@ class AddQuestionForm extends React.Component {
         <div onPaste={(e) => this.handlePaste(e, 'optImg1')}>
           <Typography variant="body2">Image A (paste):</Typography>
           <input key={this.state.fileInputKey + "opt1"} type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg1 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg1 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg1: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
 
@@ -287,7 +307,14 @@ class AddQuestionForm extends React.Component {
         <div onPaste={(e) => this.handlePaste(e, 'optImg2')}>
           <Typography variant="body2">Image B (paste):</Typography>
           <input key={this.state.fileInputKey + "opt2"} type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg2 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg2 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg2: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
 
@@ -306,7 +333,14 @@ class AddQuestionForm extends React.Component {
         <div onPaste={(e) => this.handlePaste(e, 'optImg3')}>
           <Typography variant="body2">Image C (paste):</Typography>
           <input key={this.state.fileInputKey + "opt3"} type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg3 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg3 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg3: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
 
@@ -325,7 +359,14 @@ class AddQuestionForm extends React.Component {
         <div onPaste={(e) => this.handlePaste(e, 'optImg4')}>
           <Typography variant="body2">Image D (paste):</Typography>
           <input key={this.state.fileInputKey + "opt4"} type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg4 && <span style={{color: 'green'}}>Attached!</span>}
+          {this.state.optImg4 && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Attached</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg4: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         </div>
         <br/>
@@ -446,7 +487,14 @@ class AddQuestionForm extends React.Component {
         <div style={{ marginTop: '15px' }} onPaste={(e) => this.handlePaste(e, 'explanationImage')}>
           <Typography variant="body2">Explanation Image (paste or select):</Typography>
           <input key={this.state.fileInputKey + "exp"} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.explanationImage && <span style={{color: 'green'}}>Image attached!</span>}
+          {this.state.explanationImage && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
+              <span>✓ Image attached: {this.state.explanationImage.name || 'Pasted Image'}</span>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ explanationImage: null }); }} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
         </div>
         
         <div className={this.props.classes.btnContainer}>
@@ -456,8 +504,9 @@ class AddQuestionForm extends React.Component {
           color="primary"
           type='submit'
           className={this.props.classes.btn}
+          disabled={this.state.submitting}
         >
-          Submit
+          {this.state.submitting ? <CircularProgress size={24} color="inherit" /> : 'Submit'}
         </Button>
       </form>
     )
