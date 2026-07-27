@@ -485,12 +485,22 @@ class TestPage extends React.Component {
                         {durationMins > 0 && <Typography variant="body2" style={{ color: '#475569' }}>• <strong>Duration:</strong> {durationMins} Minutes</Typography>}
                         <Typography variant="body2" style={{ color: '#475569' }}>• <strong>Marking Scheme:</strong> Each question carries marks as assigned. Read each question carefully before submitting.</Typography>
                       </div>
-                      <div style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px' }}>
-                        <Typography variant="subtitle2" style={{ color: '#475569', fontWeight: 'bold' }}>Question Palette Legend</Typography>
-                        <Typography variant="body2" style={{ color: '#475569', marginTop: '4px' }}>• 🟢 <strong>Green:</strong> Answered Question</Typography>
-                        <Typography variant="body2" style={{ color: '#475569' }}>• 🔴 <strong>Red:</strong> Visited but Unanswered Question</Typography>
-                        <Typography variant="body2" style={{ color: '#475569' }}>• 🟡 <strong>Yellow:</strong> Marked for Review</Typography>
-                        <Typography variant="body2" style={{ color: '#475569' }}>• ⚪ <strong>Grey:</strong> Not Visited</Typography>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                          <Typography variant="subtitle2" style={{ color: '#2563eb', fontWeight: 'bold' }}>Physics (Q 1 - 25)</Typography>
+                          <Typography variant="body2" style={{ color: '#475569' }}>• Q 1 - 20: Single Choice (+4 / -1)</Typography>
+                          <Typography variant="body2" style={{ color: '#475569' }}>• Q 21 - 25: Integer / Numerical (+4 / -1)</Typography>
+                        </div>
+                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                          <Typography variant="subtitle2" style={{ color: '#059669', fontWeight: 'bold' }}>Chemistry (Q 26 - 50)</Typography>
+                          <Typography variant="body2" style={{ color: '#475569' }}>• Q 26 - 45: Single Choice (+4 / -1)</Typography>
+                          <Typography variant="body2" style={{ color: '#475569' }}>• Q 46 - 50: Integer / Numerical (+4 / -1)</Typography>
+                        </div>
+                        <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px' }}>
+                          <Typography variant="subtitle2" style={{ color: '#d97706', fontWeight: 'bold' }}>Mathematics (Q 51 - 75)</Typography>
+                          <Typography variant="body2" style={{ color: '#475569' }}>• Q 51 - 70: Single Choice (+4 / -1)</Typography>
+                          <Typography variant="body2" style={{ color: '#71717a' }}>• Q 71 - 75: Integer / Numerical (+4 / -1)</Typography>
+                        </div>
                       </div>
                       <div style={{ backgroundColor: '#fef3c7', borderLeft: '4px solid #f59e0b', padding: '12px 16px', borderRadius: '4px' }}>
                         <Typography variant="body2" style={{ color: '#92400e', fontWeight: '500' }}>
