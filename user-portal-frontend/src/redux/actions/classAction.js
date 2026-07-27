@@ -101,3 +101,57 @@ export const removeSubjectFromClass = (classId, subjectId) => {
     }
   }
 }
+
+export const createClass = (name, examType) => {
+  return async (dispatch) => {
+    try {
+      const response = await axios.post(apis.BASE + apis.CREATE_CLASS, { name, examType: examType || null }, {
+        headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
+      });
+      if (response.data.success) {
+        dispatch(getAllClasses());
+        dispatch(setAlert({ isAlert: true, type: 'success', title: 'Success', message: response.data.message }));
+      } else {
+        dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: response.data.message }));
+      }
+    } catch (err) {
+      dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to create class' }));
+    }
+  }
+}
+
+export const updateClass = (classId, name, examType) => {
+  return async (dispatch) => {
+    try {
+      const response = await axios.post(apis.BASE + apis.UPDATE_CLASS, { classId, name, examType }, {
+        headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
+      });
+      if (response.data.success) {
+        dispatch(getAllClasses());
+        dispatch(setAlert({ isAlert: true, type: 'success', title: 'Success', message: response.data.message }));
+      } else {
+        dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: response.data.message }));
+      }
+    } catch (err) {
+      dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to update class' }));
+    }
+  }
+}
+
+export const deleteClass = (classId) => {
+  return async (dispatch) => {
+    try {
+      const response = await axios.post(apis.BASE + apis.DELETE_CLASS, { classId }, {
+        headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
+      });
+      if (response.data.success) {
+        dispatch(getAllClasses());
+        dispatch(setAlert({ isAlert: true, type: 'success', title: 'Success', message: response.data.message }));
+      } else {
+        dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: response.data.message }));
+      }
+    } catch (err) {
+      dispatch(setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Failed to delete class' }));
+    }
+  }
+}

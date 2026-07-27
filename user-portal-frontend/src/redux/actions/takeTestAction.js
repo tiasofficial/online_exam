@@ -89,12 +89,12 @@ export const selectedOptionAction = (details) => {
   }
 }
 
-export const saveAnswerAction = () => {
+export const saveAnswerAction = (timeSpent, revisitCounts) => {
   return async(dispatch)=> {
     console.log(store.getState());
     var answersheet =  store.getState().takeTestDetails.answersheet;
     console.log(answersheet.answers);
-    axios.post(apis.BASE + apis.SAVE_ANSWER,{answersheetid:answersheet._id,answers: answersheet.answers},{
+    axios.post(apis.BASE + apis.SAVE_ANSWER,{answersheetid:answersheet._id,answers: answersheet.answers, timeSpent: timeSpent, revisitCounts: revisitCounts},{
       headers : {
         'Authorization' : `Bearer ${Auth.retriveToken()}`
       }
@@ -117,12 +117,12 @@ export const saveAnswerAction = () => {
   }
 }
 
-export const endTestAction = () => {
+export const endTestAction = (timeSpent, revisitCounts) => {
   return async(dispatch)=> {
     console.log(store.getState());
     var answersheet =  store.getState().takeTestDetails.answersheet;
     console.log(answersheet.answers);
-    axios.post(apis.BASE + apis.END_TEST,{answersheetid:answersheet._id,answers: answersheet.answers},{
+    axios.post(apis.BASE + apis.END_TEST,{answersheetid:answersheet._id,answers: answersheet.answers, timeSpent: timeSpent, revisitCounts: revisitCounts},{
       headers : {
         'Authorization' : `Bearer ${Auth.retriveToken()}`
       }
