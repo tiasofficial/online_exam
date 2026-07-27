@@ -5,6 +5,7 @@ const questionModel = require("../models/question");
 const subjectModel = require("../models/subject");
 
 
+
 const getStudentDashboardAnalytics = async (req, res, next) => {
   var creator = req.user || null;
   if(creator == null || req.user.usertype != 'STUDENT') {
@@ -12,17 +13,14 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
   }
 
   try {
-    const answersheets = await answersheetModel.find({ student: creator._id, completed: true }).populate({
-      path: 'test',
-      populate: { path: 'targetClass' }
-    });
+    const answersheets = await answersheetModel.find({ student: creator._id, completed: true });
 
     if (!answersheets || answersheets.length === 0) {
       return res.json({ success: true, data: [] });
     }
 
     const testItemPromises = answersheets.map(async (answersheet) => {
-      const test = answersheet.test;
+      const test = await testModel.findById(answersheet.test).populate('targetClass');
       if (!test) return null;
 
       const questions = await questionModel.find({ _id: { $in: test.questions } }).populate('subject');
@@ -31,7 +29,6 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
       let totalTimeSpent = 0;
       
       let subjects = {};
-      let questionTimeAnalytics = [];
 
       for (let i = 0; i < test.questions.length; i++) {
         let qId = test.questions[i];
@@ -44,9 +41,6 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
             subjectName: subName,
             obtainedMarks: 0,
             totalPossibleMarks: 0,
-            correctCount: 0,
-            incorrectCount: 0,
-            unattemptedCount: 0,
             difficultyStats: {
               EASY: { correct: 0, attempted: 0 },
               MEDIUM: { correct: 0, attempted: 0 },
@@ -70,13 +64,6 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         subjects[subName].totalTime += timeSpent;
         subjects[subName].totalRevisits += revisit;
         subjects[subName].questionCount += 1;
-
-        questionTimeAnalytics.push({
-          name: `Q${i+1}`,
-          Time: timeSpent,
-          subject: subName,
-          difficulty: diff
-        });
 
         let ans = answersheet.answers && answersheet.answers[i] ? answersheet.answers[i] : null;
         let isAttempted = false;
@@ -121,13 +108,9 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
           if (isCorrect) {
             subjects[subName].obtainedMarks += q.marks;
             subjects[subName].difficultyStats[diff].correct++;
-            subjects[subName].correctCount++;
           } else {
             subjects[subName].obtainedMarks -= 1; // Standard -1
-            subjects[subName].incorrectCount++;
           }
-        } else {
-          subjects[subName].unattemptedCount++;
         }
       }
 
@@ -151,8 +134,7 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         overallScore: answersheet.score,
         totalPossibleMarks: totalPossibleMarks,
         totalTimeSpent: totalTimeSpent,
-        subjects: subjects,
-        questionTimeAnalytics: questionTimeAnalytics
+        subjects: subjects
       };
     });
 
