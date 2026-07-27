@@ -29,7 +29,7 @@ const useStyles = (theme) => ({
     width: "45%",
     lineHeight: "1.3",
     [theme.breakpoints.down('sm')]: {
-      width: "100%",
+      width: "45%",
     }
   },
   // Shapes
