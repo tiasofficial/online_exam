@@ -5,8 +5,9 @@ var loginService = require('../services/login');
 var questionService = require('../services/question');
 var subjectService = require('../services/subject');
 var testService = require('../services/test');
-var taketestService = require('../services/taketest');
 var resultService = require('../services/result');
+var taketestService = require('../services/taketest');
+var analyticsService = require('../services/analytics');
 var upload = require('../middleware/upload');
 
 router.get('/details',loginService.userDetails);
@@ -77,5 +78,6 @@ router.post('/endTest',taketestService.saveAnswerandEndTest);
 
 router.get('/getAllCompletedTest',resultService.getAllCompletedTest);
 router.post('/getResultMainDetailsByTestId',resultService.getResultMainDetailsByTestId);
+router.get('/getStudentDashboardAnalytics', analyticsService.getStudentDashboardAnalytics);
 router.post('/getQuestionAnswerByIds',questionService.getQuestionAnswerByIds)
 module.exports = router;
