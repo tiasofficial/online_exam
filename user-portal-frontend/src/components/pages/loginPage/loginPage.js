@@ -15,6 +15,7 @@ const useStyles = (theme) => ({
     [theme.breakpoints.down('sm')]: {
       flexDirection: 'column',
       overflow: 'auto',
+      minHeight: '100vh'
     }
   },
   leftSide: {
@@ -37,7 +38,11 @@ const useStyles = (theme) => ({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
-    position: 'relative'
+    position: 'relative',
+    [theme.breakpoints.down('sm')]: {
+      justifyContent: 'flex-start',
+      minHeight: '100vh'
+    }
   },
   titleText: {
     fontWeight: 900,
@@ -62,11 +67,12 @@ const useStyles = (theme) => ({
     width: '100%',
     maxWidth: '450px',
     zIndex: 10,
-    [theme.breakpoints.down('xs')]: {
+    [theme.breakpoints.down('sm')]: {
       padding: theme.spacing(4),
       borderRadius: '20px',
-      margin: theme.spacing(2),
-      maxWidth: 'calc(100% - 32px)',
+      margin: '0 auto',
+      marginTop: '-20px',
+      maxWidth: '90%',
       boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
     }
   },
@@ -78,11 +84,11 @@ const useStyles = (theme) => ({
       justifyContent: 'center',
       alignItems: 'center',
       width: '100%',
-      padding: theme.spacing(6, 2),
+      padding: theme.spacing(6, 2, 8, 2),
       background: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)',
       color: '#fff',
       textAlign: 'center',
-      borderRadius: '0 0 32px 32px',
+      borderRadius: '0 0 24px 24px',
       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
     }
   },
@@ -149,7 +155,7 @@ class LoginPage extends React.Component {
             </div>
 
             {/* Login Card */}
-            <div className={this.props.classes.glassCard} style={{ marginTop: window.innerWidth <= 960 ? '-40px' : '0' }}>
+            <div className={this.props.classes.glassCard}>
               <AlertBox/>
               <LoginForm/>
               
