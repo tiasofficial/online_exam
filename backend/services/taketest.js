@@ -71,13 +71,13 @@ var calculateMarks = async(questionids, answers, ansid) => {
       if (answers[index] != null) {
         if (qType === 'MULTIPLE') {
           let rawAns = Array.isArray(answers[index]) ? answers[index] : (typeof answers[index] === 'string' && answers[index] !== '' ? answers[index].split(',') : [answers[index]]);
-          userAns = rawAns.map(a => a != null ? a.toString().trim() : '');
+          userAns = rawAns.map(a => a != null ? a.toString().trim() : '').filter(a => a !== '');
           isAttempted = userAns.length > 0;
         } else if (qType === 'NUMERICAL') {
           isAttempted = answers[index].toString().trim() !== '';
         } else {
           // SINGLE_CHOICE
-          isAttempted = true;
+          isAttempted = answers[index].toString().trim() !== '';
         }
       }
 
@@ -396,7 +396,10 @@ var saveAnswer = async(req,res,next) => {
     })
     
     if(Date.now() - getAttemptEndTime(test,answersheet.startTime) > 0) {
-      answersheetModel.findByIdAndUpdate(req.body.answersheetid,{answers: req.body.answers,completed : true})
+      let updateData = { answers: req.body.answers, completed : true };
+      if (req.body.timeSpent) updateData.timeSpent = req.body.timeSpent;
+      if (req.body.revisitCounts) updateData.revisitCounts = req.body.revisitCounts;
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
       .then(()=>{
         res.json({
           success : true,
@@ -410,7 +413,10 @@ var saveAnswer = async(req,res,next) => {
       })
     }
     else {
-      answersheetModel.findByIdAndUpdate(req.body.answersheetid,{answers: req.body.answers})
+      let updateData = { answers: req.body.answers };
+      if (req.body.timeSpent) updateData.timeSpent = req.body.timeSpent;
+      if (req.body.revisitCounts) updateData.revisitCounts = req.body.revisitCounts;
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
       .then(()=>{
         res.json({
           success : true,
@@ -466,7 +472,10 @@ const saveAnswerandEndTest = async(req,res,next)=> {
     })
     
     if(Date.now() - getAttemptEndTime(test,answersheet.startTime) > 10*1000) {
-      answersheetModel.findByIdAndUpdate(req.body.answersheetid, { answers: req.body.answers, completed: true })
+      let updateData = { answers: req.body.answers, completed: true };
+      if (req.body.timeSpent) updateData.timeSpent = req.body.timeSpent;
+      if (req.body.revisitCounts) updateData.revisitCounts = req.body.revisitCounts;
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
       .then(()=>{
         console.log("answer sheet marked compeleted for test "+test._id+" user "+creator._id);
         res.json({
@@ -480,7 +489,10 @@ const saveAnswerandEndTest = async(req,res,next)=> {
         console.log("could not mark answersheet completed");
       })
     } else {
-      answersheetModel.findByIdAndUpdate(req.body.answersheetid,{answers: req.body.answers,completed : true})
+      let updateData = { answers: req.body.answers, completed: true };
+      if (req.body.timeSpent) updateData.timeSpent = req.body.timeSpent;
+      if (req.body.revisitCounts) updateData.revisitCounts = req.body.revisitCounts;
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
       .then(()=>{
         res.json({
           success : true,

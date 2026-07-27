@@ -77,7 +77,7 @@ const getResultMainDetailsByTestId = (req, res, next) => {
   answersheetModel.find({student:creator._id, test:req.body.testid, completed:true})
   .then(answersheets => {
     if(answersheets[0]) {
-      testModel.findById({_id: req.body.testid})
+      testModel.findById({_id: req.body.testid}).populate('targetClass')
       .then(test => {
         if(test) {
           var correctStatus = testService.getTestStatus(test);
@@ -121,8 +121,12 @@ const getResultMainDetailsByTestId = (req, res, next) => {
                 score : answersheets[0].score,
                 questions : test.questions,
                 answers : answersheets[0].answers,
+                timeSpent : answersheets[0].timeSpent,
+                revisitCounts : answersheets[0].revisitCounts,
                 rank: studentRank,
-                leaderboard: leaderboard
+                leaderboard: leaderboard,
+                className: test.targetClass ? test.targetClass.name : '',
+                examType: test.targetClass ? test.targetClass.examType : ''
               }
             })
           }).catch(err=> {
@@ -230,7 +234,9 @@ const getStudentResultDetailsForTeacher = async (req, res, next) => {
         score: answersheet.score,
         testTitle: test.title,
         questions: orderedQuestions, // Detailed question objects
-        answers: answersheet.answers // Array of strings (Student's answers)
+        answers: answersheet.answers, // Array of strings (Student's answers)
+        timeSpent: answersheet.timeSpent,
+        revisitCounts: answersheet.revisitCounts
       }
     });
   } catch(err) {

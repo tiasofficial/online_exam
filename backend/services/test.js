@@ -2,6 +2,7 @@ var testModel = require('../models/test');
 var questionModel = require('../models/question');
 const testRegistrationModel = require('../models/testRegistration');
 const classModel = require('../models/class');
+const subjectModel = require('../models/subject');
 const { uploadFile, deleteFile } = require('./cloudinary');
 
 var getTestStatus = (test) => {
@@ -164,7 +165,7 @@ var getAllTest = (req,res,next) => {
   try {
     var orgId = req.user && req.user.usertype === 'TEACHER' ? (req.user.organizationId || null) : null;
     var query = req.user && req.user.usertype === 'TEACHER' ? { organizationId: orgId } : {};
-    testModel.find(query).sort({startTime:-1})
+    testModel.find(query).populate('targetClass').sort({startTime:-1})
     .then((result)=>{
       for(x in result) {
         var correctStatus = getTestStatus(result[x]);
@@ -175,7 +176,7 @@ var getAllTest = (req,res,next) => {
       }
       res.json({
         success : true,
-        testlist : result.map(v=>({_id:v._id,title:v.title,status: v.status, subjects: v.subjects}))
+        testlist : result.map(v=>({_id:v._id,title:v.title,status: v.status, subjects: v.subjects, targetClass: v.targetClass}))
       })
     })
 
@@ -494,7 +495,7 @@ var getTestQuestionsForTeacher = async(req,res,next) => {
   }
 
   try {
-    var test = await testModel.findById({_id:req.body.testid});
+    var test = await testModel.findById({_id:req.body.testid}).populate('targetClass');
     if(test) {
       var ques = await questionModel.find({_id:{$in:test.questions}});
       var questions = [];
@@ -520,8 +521,10 @@ var getTestQuestionsForTeacher = async(req,res,next) => {
           marks : x.marks,
           subject: x.subject,
           explanation: x.explanation,
-          explanationImage: x.explanationImage
-        }))
+          explanationImage: x.explanationImage,
+          difficulty: x.difficulty
+        })),
+        targetClassName: test.targetClass ? (test.targetClass.examType || test.targetClass.name) : null
       });
     } else {
       res.json({
@@ -586,10 +589,20 @@ var deleteTest = async (req, res, next) => {
       }
     }
 
-    await questionModel.deleteMany({ _id: { $in: test.questions } });
-    await testModel.findByIdAndDelete(testid);
-    await testRegistrationModel.deleteMany({ test: testid });
-    res.json({ success: true, message: "Test and all associated files deleted successfully" });
+      await questionModel.deleteMany({ _id: { $in: test.questions } });
+      
+      if (test.poster) {
+        if (test.poster.startsWith('/uploads/')) {
+          const filePath = path.join(__dirname, '../public', test.poster);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } else if (test.poster.includes('res.cloudinary.com')) {
+          await deleteFile(test.poster);
+        }
+      }
+      
+      await testModel.findByIdAndDelete(testid);
+      await testRegistrationModel.deleteMany({ test: testid });
+      res.json({ success: true, message: "Test and all associated files deleted successfully" });
   } catch(err) {
     console.log(err);
     res.status(500).json({ success: false, message: "Error deleting test" });
@@ -641,12 +654,16 @@ var addExamQuestion = async (req, res, next) => {
   }
 
   try {
-    const { testId, body, option1, option2, option3, option4, answer, questionType, marks, targetSubject, explanation } = req.body;
+    const { testId, body, option1, option2, option3, option4, answer, questionType, marks, targetSubject, explanation, difficulty } = req.body;
     
     // Process uploaded images
     let bodyImage = null;
     let explanationImage = null;
     let optionImages = ['', '', '', ''];
+
+    if (!answer || (typeof answer === 'string' && answer.trim() === '') || (Array.isArray(answer) && answer.length === 0)) {
+      return res.status(400).json({ success: false, message: "A valid correct answer must be provided." });
+    }
     
     if (req.files) {
       if (req.files['bodyImage']) bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
@@ -655,6 +672,70 @@ var addExamQuestion = async (req, res, next) => {
       if (req.files['optImg2']) optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
       if (req.files['optImg3']) optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
       if (req.files['optImg4']) optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+    }
+
+    // Fetch test to determine class and auto-assign subject if needed
+    const test = await testModel.findById(testId).populate({
+      path: 'targetClass',
+      populate: { path: 'subjects' }
+    });
+    if (!test) {
+      return res.status(404).json({ success: false, message: "Test not found" });
+    }
+    
+    let finalSubject = targetSubject;
+    const classExamType = test.targetClass ? (test.targetClass.examType || null) : null;
+    if (!finalSubject && classExamType) {
+      if (classExamType === 'JEE-Mains') {
+         let qLen = test.questions.length;
+         let subjName = 'Physics';
+         if (qLen >= 25 && qLen < 50) subjName = 'Chemistry';
+         if (qLen >= 50) subjName = 'Mathematics';
+         
+         // Try to find in class subjects first
+         let subj = test.targetClass.subjects && test.targetClass.subjects.find(s => (s.subject && s.subject.toLowerCase() === subjName.toLowerCase()) || (s.name && s.name.toLowerCase() === subjName.toLowerCase()));
+         
+         if (subj) {
+             finalSubject = subj._id;
+         } else {
+             // Fallback to database
+             let dbSubj = await subjectModel.findOne({ name: { $regex: new RegExp('^' + subjName + '$', 'i') } });
+             if (dbSubj) {
+                 finalSubject = dbSubj._id;
+             } else if (test.targetClass.subjects && test.targetClass.subjects.length > 0) {
+                 finalSubject = test.targetClass.subjects[0]._id;
+             }
+         }
+      } else if (classExamType === 'NEET') {
+         // NEET - auto-assign subject based on question index
+         let qLen = test.questions.length;
+         let subjName = 'Physics';
+         if (qLen >= 45 && qLen < 90) subjName = 'Chemistry';
+         if (qLen >= 90) subjName = 'Biology';
+         
+         let subj = test.targetClass.subjects && test.targetClass.subjects.find(s => (s.name && s.name.toLowerCase() === subjName.toLowerCase()));
+         if (subj) {
+             finalSubject = subj._id;
+         } else {
+             let dbSubj = await subjectModel.findOne({ name: { $regex: new RegExp('^' + subjName + '$', 'i') } });
+             if (dbSubj) finalSubject = dbSubj._id;
+             else if (test.targetClass.subjects && test.targetClass.subjects.length > 0) {
+                 finalSubject = test.targetClass.subjects[0]._id;
+             }
+         }
+      }
+    }
+
+    if (!finalSubject) {
+      return res.status(400).json({ success: false, message: "Subject is required and could not be determined automatically." });
+    }
+
+    // Enforce max question limits per exam type
+    if (classExamType === 'JEE-Mains' && test.questions.length >= 75) {
+        return res.json({ success: false, message: "JEE-Mains test can only have a maximum of 75 questions." });
+    }
+    if (classExamType === 'NEET' && test.questions.length >= 180) {
+        return res.json({ success: false, message: "NEET test can only have a maximum of 180 questions." });
     }
 
     // Create the new question
@@ -666,7 +747,8 @@ var addExamQuestion = async (req, res, next) => {
       answer: answer,
       questionType: questionType || 'SINGLE',
       marks: parseInt(marks),
-      subject: targetSubject, // Need a subject for schema validation
+      subject: finalSubject, // Assigned dynamically
+      difficulty: difficulty || 'MEDIUM',
       explanation: explanation || '',
       explanationImage: explanationImage || '',
       createdBy: req.user._id,
@@ -674,12 +756,6 @@ var addExamQuestion = async (req, res, next) => {
     });
 
     const savedQuestion = await newQuestion.save();
-
-    // Update the test
-    const test = await testModel.findById(testId);
-    if (!test) {
-      return res.status(404).json({ success: false, message: "Test not found" });
-    }
 
     test.questions.push(savedQuestion._id);
     test.maxmarks += savedQuestion.marks;
@@ -698,7 +774,7 @@ var editExamQuestion = async (req, res, next) => {
   }
 
   try {
-    const { questionId, testId, body, option1, option2, option3, option4, answer, questionType, marks, explanation } = req.body;
+    const { questionId, testId, body, option1, option2, option3, option4, answer, questionType, marks, explanation, difficulty } = req.body;
     
     const question = await questionModel.findById(questionId);
     if (!question) {
@@ -708,6 +784,10 @@ var editExamQuestion = async (req, res, next) => {
     const test = await testModel.findById(testId);
     if (!test) {
       return res.status(404).json({ success: false, message: "Test not found" });
+    }
+
+    if (!answer || (typeof answer === 'string' && answer.trim() === '') || (Array.isArray(answer) && answer.length === 0)) {
+      return res.status(400).json({ success: false, message: "A valid correct answer must be provided." });
     }
 
     let diffMarks = parseInt(marks) - question.marks;
@@ -724,28 +804,76 @@ var editExamQuestion = async (req, res, next) => {
     // Process uploaded images
     if (req.files) {
       let imagesModified = false;
-      if (req.files['bodyImage']) {
-        question.bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
-      }
+        if (req.files['bodyImage']) {
+          if (question.bodyImage && question.bodyImage.includes('res.cloudinary.com')) {
+            await deleteFile(question.bodyImage);
+          } else if (question.bodyImage && question.bodyImage.startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.bodyImage);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          question.bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+        }
       if (req.files['explanationImage']) {
+        if (question.explanationImage && question.explanationImage.includes('res.cloudinary.com')) {
+          await deleteFile(question.explanationImage);
+        } else if (question.explanationImage && question.explanationImage.startsWith('/uploads/')) {
+          const fs = require('fs');
+          const path = require('path');
+          const filePath = path.join(__dirname, '../public', question.explanationImage);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
         question.explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
       }
-      if (req.files['optImg1']) {
-        question.optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
-        imagesModified = true;
-      }
-      if (req.files['optImg2']) {
-        question.optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
-        imagesModified = true;
-      }
-      if (req.files['optImg3']) {
-        question.optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
-        imagesModified = true;
-      }
-      if (req.files['optImg4']) {
-        question.optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
-        imagesModified = true;
-      }
+        if (req.files['optImg1']) {
+          if (question.optionImages[0] && question.optionImages[0].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[0]);
+          } else if (question.optionImages[0] && question.optionImages[0].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[0]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          question.optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
+          imagesModified = true;
+        }
+        if (req.files['optImg2']) {
+          if (question.optionImages[1] && question.optionImages[1].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[1]);
+          } else if (question.optionImages[1] && question.optionImages[1].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[1]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          question.optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
+          imagesModified = true;
+        }
+        if (req.files['optImg3']) {
+          if (question.optionImages[2] && question.optionImages[2].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[2]);
+          } else if (question.optionImages[2] && question.optionImages[2].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[2]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          question.optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
+          imagesModified = true;
+        }
+        if (req.files['optImg4']) {
+          if (question.optionImages[3] && question.optionImages[3].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[3]);
+          } else if (question.optionImages[3] && question.optionImages[3].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[3]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          question.optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+          imagesModified = true;
+        }
       if (imagesModified) {
         question.markModified('optionImages');
       }
@@ -756,6 +884,7 @@ var editExamQuestion = async (req, res, next) => {
     question.answer = answer;
     question.questionType = questionType || 'SINGLE';
     question.marks = parseInt(marks);
+    question.difficulty = difficulty || 'MEDIUM';
     if (explanation !== undefined) {
       question.explanation = explanation;
     }
@@ -850,13 +979,25 @@ var deleteExamQuestion = async (req, res, next) => {
 
 var uploadPoster = async(req, res, next) => {
   try {
-    const testId = req.body.testId;
-    
-    if (!req.file) {
-      return res.json({ success: false, message: 'No file uploaded' });
-    }
+      const testId = req.body.testId;
+      
+      if (!req.file) {
+        return res.json({ success: false, message: 'No file uploaded' });
+      }
 
-    const posterUrl = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+      const test = await testModel.findById(testId);
+      if (test && test.poster) {
+        if (test.poster.includes('res.cloudinary.com')) {
+          await deleteFile(test.poster);
+        } else if (test.poster.startsWith('/uploads/')) {
+          const fs = require('fs');
+          const path = require('path');
+          const filePath = path.join(__dirname, '../public', test.poster);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      }
+  
+      const posterUrl = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
     
     await testModel.updateOne({ _id: testId }, { $set: { poster: posterUrl } });
 

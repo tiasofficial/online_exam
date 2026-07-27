@@ -1,7 +1,7 @@
 var subjectModel = require('../models/subject')
 var questionModel = require('../models/question');
 var testModel = require('../models/test');
-const { uploadFile } = require('./cloudinary');
+const { uploadFile, deleteFile } = require('./cloudinary');
 
 var addQuestion = (req,res,next)=>{
   var creator = req.user || null;
@@ -48,6 +48,7 @@ var addQuestion = (req,res,next)=>{
             questionType : req.body.questionType || 'SINGLE',
             marks : req.body.marks,
             answer : req.body.answer,
+            difficulty: req.body.difficulty || 'MEDIUM',
             status : true,
             createdBy : creator._id,
             organizationId : creator.organizationId
@@ -163,12 +164,72 @@ var updateQuestion = async (req,res,next)=>{
       let optionImages = question.optionImages || ['', '', '', ''];
       
       if (req.files) {
-        if (req.files['bodyImage']) bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
-        if (req.files['explanationImage']) explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
-        if (req.files['optImg1']) optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
-        if (req.files['optImg2']) optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
-        if (req.files['optImg3']) optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
-        if (req.files['optImg4']) optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+        if (req.files['bodyImage']) {
+          if (question.bodyImage && question.bodyImage.includes('res.cloudinary.com')) {
+            await deleteFile(question.bodyImage);
+          } else if (question.bodyImage && question.bodyImage.startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.bodyImage);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          bodyImage = await uploadFile(req.files['bodyImage'][0].buffer, req.files['bodyImage'][0].originalname, req.files['bodyImage'][0].mimetype);
+        }
+        if (req.files['explanationImage']) {
+          if (question.explanationImage && question.explanationImage.includes('res.cloudinary.com')) {
+            await deleteFile(question.explanationImage);
+          } else if (question.explanationImage && question.explanationImage.startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.explanationImage);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          explanationImage = await uploadFile(req.files['explanationImage'][0].buffer, req.files['explanationImage'][0].originalname, req.files['explanationImage'][0].mimetype);
+        }
+        if (req.files['optImg1']) {
+          if (question.optionImages && question.optionImages[0] && question.optionImages[0].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[0]);
+          } else if (question.optionImages && question.optionImages[0] && question.optionImages[0].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[0]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          optionImages[0] = await uploadFile(req.files['optImg1'][0].buffer, req.files['optImg1'][0].originalname, req.files['optImg1'][0].mimetype);
+        }
+        if (req.files['optImg2']) {
+          if (question.optionImages && question.optionImages[1] && question.optionImages[1].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[1]);
+          } else if (question.optionImages && question.optionImages[1] && question.optionImages[1].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[1]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          optionImages[1] = await uploadFile(req.files['optImg2'][0].buffer, req.files['optImg2'][0].originalname, req.files['optImg2'][0].mimetype);
+        }
+        if (req.files['optImg3']) {
+          if (question.optionImages && question.optionImages[2] && question.optionImages[2].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[2]);
+          } else if (question.optionImages && question.optionImages[2] && question.optionImages[2].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[2]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          optionImages[2] = await uploadFile(req.files['optImg3'][0].buffer, req.files['optImg3'][0].originalname, req.files['optImg3'][0].mimetype);
+        }
+        if (req.files['optImg4']) {
+          if (question.optionImages && question.optionImages[3] && question.optionImages[3].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[3]);
+          } else if (question.optionImages && question.optionImages[3] && question.optionImages[3].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[3]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          optionImages[3] = await uploadFile(req.files['optImg4'][0].buffer, req.files['optImg4'][0].originalname, req.files['optImg4'][0].mimetype);
+        }
       }
 
       const result = await questionModel.findByIdAndUpdate(req.body.id,{
@@ -179,6 +240,7 @@ var updateQuestion = async (req,res,next)=>{
         questionType : req.body.questionType || 'SINGLE',
         marks : req.body.marks,
         answer : req.body.answer,
+        difficulty: req.body.difficulty || 'MEDIUM',
         createdBy : creator._id,
         bodyImage: bodyImage,
         explanationImage: explanationImage,
@@ -426,6 +488,7 @@ var getQuestionAnswerByIds = (req,res,next) => {
               questionType : ques[q].questionType,
               answer : ques[q].answer,
               explanation : ques[q].explanation,
+              difficulty : ques[q].difficulty,
               bodyImage: ques[q].bodyImage,
               explanationImage: ques[q].explanationImage,
               optionImages: ques[q].optionImages
