@@ -187,7 +187,27 @@ class PaperSetup extends Component {
       }
     }
 
-    if (!this.state.answer || (typeof this.state.answer === 'string' && this.state.answer.trim() === '') || (Array.isArray(this.state.answer) && this.state.answer.length === 0)) {
+    let answerMissing = false;
+    if (this.state.questionType === 'NUMERICAL') {
+      answerMissing = !this.state.answer && this.state.answer !== 0;
+    } else if (this.state.questionType === 'MULTIPLE') {
+      answerMissing = !Array.isArray(this.state.answer) || this.state.answer.length === 0;
+    } else {
+      answerMissing = !this.state.answer;
+      if (typeof this.state.answer === 'string' && this.state.answer.trim() === '') {
+        // If the answer is whitespace, it's valid if it matches an option that has an image attached
+        const matchesOpt1 = this.state.answer === this.state.option1 && !!this.state.optImg1;
+        const matchesOpt2 = this.state.answer === this.state.option2 && !!this.state.optImg2;
+        const matchesOpt3 = this.state.answer === this.state.option3 && !!this.state.optImg3;
+        const matchesOpt4 = this.state.answer === this.state.option4 && !!this.state.optImg4;
+        
+        if (!matchesOpt1 && !matchesOpt2 && !matchesOpt3 && !matchesOpt4) {
+          answerMissing = true;
+        }
+      }
+    }
+
+    if (answerMissing) {
       this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Please select or provide a correct answer.' });
       return;
     }

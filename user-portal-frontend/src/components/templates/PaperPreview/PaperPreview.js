@@ -135,7 +135,27 @@ class PaperPreview extends Component {
       }
     }
 
-    if (!this.state.editData.answer || (typeof this.state.editData.answer === 'string' && this.state.editData.answer.trim() === '') || (Array.isArray(this.state.editData.answer) && this.state.editData.answer.length === 0)) {
+    let answerMissing = false;
+    if (questionType === 'NUMERICAL') {
+      answerMissing = !this.state.editData.answer && this.state.editData.answer !== 0;
+    } else if (questionType === 'MULTIPLE') {
+      answerMissing = !Array.isArray(this.state.editData.answer) || this.state.editData.answer.length === 0;
+    } else {
+      answerMissing = !this.state.editData.answer;
+      if (typeof this.state.editData.answer === 'string' && this.state.editData.answer.trim() === '') {
+        // If the answer is whitespace, it's valid if it matches an option that has an image attached
+        const matchesOpt1 = this.state.editData.answer === this.state.editData.option1 && !!this.state.editData.optImg1;
+        const matchesOpt2 = this.state.editData.answer === this.state.editData.option2 && !!this.state.editData.optImg2;
+        const matchesOpt3 = this.state.editData.answer === this.state.editData.option3 && !!this.state.editData.optImg3;
+        const matchesOpt4 = this.state.editData.answer === this.state.editData.option4 && !!this.state.editData.optImg4;
+        
+        if (!matchesOpt1 && !matchesOpt2 && !matchesOpt3 && !matchesOpt4) {
+          answerMissing = true;
+        }
+      }
+    }
+
+    if (answerMissing) {
       this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: 'Please select or provide a correct answer.' });
       return;
     }

@@ -128,9 +128,24 @@ class AddQuestionForm extends React.Component {
 
   async handleSubmit(event) {
     event.preventDefault();
-    const isAnswerInvalid = this.state.questionType === 'MULTIPLE' 
-      ? (!Array.isArray(this.state.answer) || this.state.answer.length === 0)
-      : (!this.state.answer || this.state.answer === 'None' || this.state.answer === '');
+    let isAnswerInvalid = false;
+    if (this.state.questionType === 'MULTIPLE') {
+      isAnswerInvalid = (!Array.isArray(this.state.answer) || this.state.answer.length === 0);
+    } else {
+      isAnswerInvalid = (!this.state.answer || this.state.answer === 'None' || this.state.answer === '');
+      
+      // If the answer is falsy or empty, it might still be valid if it exactly matches an option that has an image attached
+      if (isAnswerInvalid && (this.state.answer === '' || this.state.answer === undefined || this.state.answer === null || typeof this.state.answer === 'string' && this.state.answer.trim() === '')) {
+        const matchesOpt1 = this.state.answer === this.state.options[0] && !!this.state.optImg1;
+        const matchesOpt2 = this.state.answer === this.state.options[1] && !!this.state.optImg2;
+        const matchesOpt3 = this.state.answer === this.state.options[2] && !!this.state.optImg3;
+        const matchesOpt4 = this.state.answer === this.state.options[3] && !!this.state.optImg4;
+        
+        if (matchesOpt1 || matchesOpt2 || matchesOpt3 || matchesOpt4) {
+          isAnswerInvalid = false;
+        }
+      }
+    }
 
     if(isAnswerInvalid){
       console.log('answer error');
