@@ -661,7 +661,26 @@ var addExamQuestion = async (req, res, next) => {
     let explanationImage = null;
     let optionImages = ['', '', '', ''];
 
-    if (!answer || (typeof answer === 'string' && answer.trim() === '') || (Array.isArray(answer) && answer.length === 0)) {
+    let answerMissing = false;
+    if (questionType === 'NUMERICAL') {
+      answerMissing = !answer && answer !== 0;
+    } else if (questionType === 'MULTIPLE') {
+      answerMissing = !Array.isArray(answer) || answer.length === 0;
+    } else {
+      answerMissing = !answer;
+      if (typeof answer === 'string' && answer.trim() === '') {
+        const matchesOpt1 = answer === option1 && req.files && req.files['optImg1'];
+        const matchesOpt2 = answer === option2 && req.files && req.files['optImg2'];
+        const matchesOpt3 = answer === option3 && req.files && req.files['optImg3'];
+        const matchesOpt4 = answer === option4 && req.files && req.files['optImg4'];
+        
+        if (!matchesOpt1 && !matchesOpt2 && !matchesOpt3 && !matchesOpt4) {
+          answerMissing = true;
+        }
+      }
+    }
+
+    if (answerMissing) {
       return res.status(400).json({ success: false, message: "A valid correct answer must be provided." });
     }
     
@@ -786,7 +805,26 @@ var editExamQuestion = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Test not found" });
     }
 
-    if (!answer || (typeof answer === 'string' && answer.trim() === '') || (Array.isArray(answer) && answer.length === 0)) {
+    let answerMissing = false;
+    if (questionType === 'NUMERICAL') {
+      answerMissing = !answer && answer !== 0;
+    } else if (questionType === 'MULTIPLE') {
+      answerMissing = !Array.isArray(answer) || answer.length === 0;
+    } else {
+      answerMissing = !answer;
+      if (typeof answer === 'string' && answer.trim() === '') {
+        const matchesOpt1 = answer === option1 && ((req.files && req.files['optImg1']) || (question.optionImages && question.optionImages[0]));
+        const matchesOpt2 = answer === option2 && ((req.files && req.files['optImg2']) || (question.optionImages && question.optionImages[1]));
+        const matchesOpt3 = answer === option3 && ((req.files && req.files['optImg3']) || (question.optionImages && question.optionImages[2]));
+        const matchesOpt4 = answer === option4 && ((req.files && req.files['optImg4']) || (question.optionImages && question.optionImages[3]));
+        
+        if (!matchesOpt1 && !matchesOpt2 && !matchesOpt3 && !matchesOpt4) {
+          answerMissing = true;
+        }
+      }
+    }
+
+    if (answerMissing) {
       return res.status(400).json({ success: false, message: "A valid correct answer must be provided." });
     }
 

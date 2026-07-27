@@ -154,6 +154,34 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
     const testItems = await Promise.all(testItemPromises);
     const validTestItems = testItems.filter(t => t !== null);
     
+    // DEBUG MOCK: Force a fake test to appear so we know the frontend is working!
+    validTestItems.push({
+      testId: "debug-mock-123",
+      testTitle: "DEBUG FAKE TEST (If you see this, DB is empty!)",
+      className: "Mock Class",
+      overallScore: 10,
+      totalPossibleMarks: 20,
+      totalTimeSpent: 120,
+      subjects: {
+        "Math": {
+          subjectName: "Math",
+          obtainedMarks: 10,
+          totalPossibleMarks: 20,
+          difficultyStats: {
+            EASY: { correct: 1, attempted: 2 },
+            MEDIUM: { correct: 0, attempted: 1 },
+            HARD: { correct: 0, attempted: 0 }
+          },
+          totalTime: 60,
+          totalRevisits: 1,
+          questionCount: 3,
+          accuracy: 0.5,
+          avgTimeSpent: 20,
+          avgRevisits: 0.3
+        }
+      }
+    });
+
     console.log("Final validTestItems length:", validTestItems.length);
 
     res.json({ success: true, data: validTestItems });
