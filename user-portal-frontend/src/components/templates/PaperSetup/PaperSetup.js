@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import { TextField, Button, Typography, MenuItem, Select, FormControl, InputLabel, Paper, Checkbox, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@material-ui/core';
+import { TextField, Button, Typography, MenuItem, Select, FormControl, InputLabel, Paper, Checkbox, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, IconButton } from '@material-ui/core';
+import CloseIcon from '@material-ui/icons/Close';
 import axios from 'axios';
 import apis from '../../../helper/Apis';
 import Auth from '../../../helper/Auth';
@@ -72,7 +73,8 @@ class PaperSetup extends Component {
       fileInputKey: Date.now(),
       rulesDialogOpen: false,
       hasShownRules: false,
-      targetClassName: props.targetClassName || null
+      targetClassName: props.targetClassName || null,
+      submitting: false
     };
   }
 
@@ -164,8 +166,11 @@ class PaperSetup extends Component {
           onChange={this.handleFileChange} 
         />
         {this.state[name] && (
-          <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem' }}>
-            ✓ Image attached: {this.state[name].name || 'Pasted Image'}
+          <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px' }}>
+            <span>✓ Image attached: {this.state[name].name || 'Pasted Image'}</span>
+            <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ [name]: null }); }} style={{ color: '#d32f2f' }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
           </div>
         )}
       </div>
@@ -235,6 +240,8 @@ class PaperSetup extends Component {
     if (this.state.optImg3) formData.append('optImg3', this.state.optImg3);
     if (this.state.optImg4) formData.append('optImg4', this.state.optImg4);
 
+    this.setState({ submitting: true });
+
     try {
       const response = await axios.post(apis.BASE + '/api/v1/user/addExamQuestion', formData, {
         headers: { 
@@ -252,14 +259,17 @@ class PaperSetup extends Component {
           option4: '    ', optImg4: null,
           answer: ' ', questionType: 'SINGLE', marks: 1, difficulty: 'MEDIUM',
           explanation: '', explanationImage: null,
-          fileInputKey: Date.now()
+          fileInputKey: Date.now(),
+          submitting: false
         }, () => {
           this.fetchTestDetails(); // Refresh list
         });
       } else {
+        this.setState({ submitting: false });
         this.props.setAlert({ isAlert: true, type: 'error', title: 'Error', message: response.data.message });
       }
     } catch (err) {
+      this.setState({ submitting: false });
       console.log("Error in request:", err);
       let errMsg = err.message;
       if (err.response && err.response.data && err.response.data.message) {
@@ -446,7 +456,9 @@ class PaperSetup extends Component {
           {this.renderImageUpload('explanationImage', 'Explanation Image')}
 
           <div className={classes.btnContainer}>
-            <Button variant="contained" color="primary" type="submit">Add Question</Button>
+            <Button variant="contained" color="primary" type="submit" disabled={this.state.submitting}>
+              {this.state.submitting ? <CircularProgress size={24} color="inherit" /> : 'Add Question'}
+            </Button>
             {!this.props.hideFinishButton && (
               <Button
                 variant='outlined'
