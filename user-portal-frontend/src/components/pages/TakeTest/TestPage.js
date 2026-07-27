@@ -371,6 +371,16 @@ class TestPage extends React.Component {
     });
   }
 
+  handleAutoSave = () => {
+    const { curIndex, timeSpent, lastSwitchTime, revisitCounts } = this.state;
+    const newTimeSpent = [...timeSpent];
+    newTimeSpent[curIndex] += Math.floor((Date.now() - lastSwitchTime) / 1000);
+    
+    this.setState({ timeSpent: newTimeSpent, lastSwitchTime: Date.now() }, () => {
+      this.props.saveAnswerAction(this.state.timeSpent, this.state.revisitCounts);
+    });
+  }
+
   render() {
     const { classes, taketest, user } = this.props;
     if (taketest.isRetrived === false) {
@@ -396,7 +406,7 @@ class TestPage extends React.Component {
             <div className={classes.activeTab} style={{borderTopLeftRadius: '0px', borderTopRightRadius: '0px'}}>{testSubject}</div>
           </div>
           <div style={{display: 'flex', alignItems: 'center', fontWeight: 'bold'}}>
-            Time Left: &nbsp; <Timer time={timerTime} />
+            Time Left: &nbsp; <Timer time={timerTime} onAutoSave={this.handleAutoSave} onTimeout={() => this.endtest()} />
           </div>
         </div>
 
