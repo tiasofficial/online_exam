@@ -16,7 +16,7 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
 
   try {
     console.log("Fetching answersheets for student:", creator._id);
-    const answersheets = await answersheetModel.find({ student: creator._id, completed: true });
+    const answersheets = await answersheetModel.find({ student: creator._id, completed: true }).sort({ createdAt: -1 });
     console.log("Answersheets found:", answersheets.length);
 
     if (!answersheets || answersheets.length === 0) {
