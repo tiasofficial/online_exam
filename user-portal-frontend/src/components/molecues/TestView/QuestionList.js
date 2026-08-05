@@ -36,24 +36,24 @@ const useStyles = (theme) => ({
   shapeNotVisited: {
     width: "50px", height: "50px", backgroundColor: "#e0e0e0", border: "1px solid #999", borderRadius: "4px",
     display: "flex", alignItems: "center", justifyContent: "center", marginRight: "10px", color: '#333', cursor: 'pointer', fontSize: "20px", fontWeight: "bold",
-    [theme.breakpoints.down('sm')]: { width: '35px', height: '35px', fontSize: '14px', marginRight: '5px' }
+    [theme.breakpoints.down('sm')]: { width: '28px', height: '28px', fontSize: '12px', marginRight: '3px' }
   },
   shapeNotAnswered: {
     width: "50px", height: "50px", backgroundColor: "#d32f2f", 
     borderBottomLeftRadius: "25px", borderBottomRightRadius: "25px", borderRadius: "4px",
     display: "flex", alignItems: "center", justifyContent: "center", marginRight: "10px", color: 'white', cursor: 'pointer', fontSize: "20px", fontWeight: "bold",
-    [theme.breakpoints.down('sm')]: { width: '35px', height: '35px', fontSize: '14px', marginRight: '5px', borderBottomLeftRadius: "17px", borderBottomRightRadius: "17px" }
+    [theme.breakpoints.down('sm')]: { width: '28px', height: '28px', fontSize: '12px', marginRight: '3px', borderBottomLeftRadius: "14px", borderBottomRightRadius: "14px" }
   },
   shapeAnswered: {
     width: "50px", height: "50px", backgroundColor: "#689f38", 
     borderTopLeftRadius: "25px", borderTopRightRadius: "25px", borderRadius: "4px",
     display: "flex", alignItems: "center", justifyContent: "center", marginRight: "10px", color: 'white', cursor: 'pointer', fontSize: "20px", fontWeight: "bold",
-    [theme.breakpoints.down('sm')]: { width: '35px', height: '35px', fontSize: '14px', marginRight: '5px', borderTopLeftRadius: "17px", borderTopRightRadius: "17px" }
+    [theme.breakpoints.down('sm')]: { width: '28px', height: '28px', fontSize: '12px', marginRight: '3px', borderTopLeftRadius: "14px", borderTopRightRadius: "14px" }
   },
   shapeMarked: {
     width: "50px", height: "50px", backgroundColor: "#7b1fa2", borderRadius: "50%",
     display: "flex", alignItems: "center", justifyContent: "center", marginRight: "10px", color: 'white', cursor: 'pointer', fontSize: "20px", fontWeight: "bold",
-    [theme.breakpoints.down('sm')]: { width: '35px', height: '35px', fontSize: '14px', marginRight: '5px' }
+    [theme.breakpoints.down('sm')]: { width: '28px', height: '28px', fontSize: '12px', marginRight: '3px' }
   },
   shapeMarkedAnswered: {
     width: "50px", height: "50px", backgroundColor: "#7b1fa2", borderRadius: "50%",
@@ -68,7 +68,7 @@ const useStyles = (theme) => ({
       borderRadius: '50%',
       border: '2px solid #fff'
     },
-    [theme.breakpoints.down('sm')]: { width: '35px', height: '35px', fontSize: '14px', marginRight: '5px', '&::after': { width: '10px', height: '10px', bottom: '1px', right: '1px' } }
+    [theme.breakpoints.down('sm')]: { width: '28px', height: '28px', fontSize: '12px', marginRight: '3px', '&::after': { width: '8px', height: '8px', bottom: '1px', right: '1px' } }
   },
   subjectHeader: {
     backgroundColor: '#3b5998',
@@ -85,6 +85,10 @@ const useStyles = (theme) => ({
     backgroundColor: "#eaf3fa", 
     flexGrow: 1,
     alignContent: 'flex-start',
+    [theme.breakpoints.down('sm')]: {
+      gap: "5px",
+      padding: "10px",
+    }
   }
 });
 
