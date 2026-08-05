@@ -8,6 +8,9 @@ var testRegistrationSchema = new mongoose.Schema({
   test : {
     type : mongoose.Schema.Types.ObjectId,
     ref : 'test'
+  },
+  reassignEndTime: {
+    type: Date
   }
 },{
   timestamps:true
