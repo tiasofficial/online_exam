@@ -52,6 +52,8 @@ const apis = {
   DELETE_TEST: "/api/v1/user/deleteTest",
   ASSIGN_STUDENTS: "/api/v1/user/assignStudentsToTest",
   GET_ASSIGNED_STUDENTS: "/api/v1/user/getAssignedStudents",
+  EDIT_TEST_TIME: "/api/v1/user/editTestTime",
+  REASSIGN_STUDENT_TEST: "/api/v1/user/reassignStudentTest",
   GET_STUDENT_RESULT_DETAILS_TEACHER: "/api/v1/user/getStudentResultDetailsForTeacher"
 }
 
