@@ -163,6 +163,44 @@ var updateQuestion = async (req,res,next)=>{
       let explanationImage = question.explanationImage || '';
       let optionImages = question.optionImages || ['', '', '', ''];
       
+      if (req.body.delete_bodyImage === 'true') {
+        if (question.bodyImage && question.bodyImage.includes('res.cloudinary.com')) {
+          await deleteFile(question.bodyImage);
+        } else if (question.bodyImage && question.bodyImage.startsWith('/uploads/')) {
+          const fs = require('fs');
+          const path = require('path');
+          const filePath = path.join(__dirname, '../public', question.bodyImage);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        bodyImage = '';
+      }
+
+      if (req.body.delete_explanationImage === 'true') {
+        if (question.explanationImage && question.explanationImage.includes('res.cloudinary.com')) {
+          await deleteFile(question.explanationImage);
+        } else if (question.explanationImage && question.explanationImage.startsWith('/uploads/')) {
+          const fs = require('fs');
+          const path = require('path');
+          const filePath = path.join(__dirname, '../public', question.explanationImage);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        explanationImage = '';
+      }
+
+      for (let i = 1; i <= 4; i++) {
+        if (req.body[`delete_optImg${i}`] === 'true') {
+          if (question.optionImages && question.optionImages[i-1] && question.optionImages[i-1].includes('res.cloudinary.com')) {
+            await deleteFile(question.optionImages[i-1]);
+          } else if (question.optionImages && question.optionImages[i-1] && question.optionImages[i-1].startsWith('/uploads/')) {
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(__dirname, '../public', question.optionImages[i-1]);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }
+          optionImages[i-1] = '';
+        }
+      }
+
       if (req.files) {
         if (req.files['bodyImage']) {
           if (question.bodyImage && question.bodyImage.includes('res.cloudinary.com')) {

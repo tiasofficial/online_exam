@@ -275,7 +275,7 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   var studentClasses = await classModel.find({ students: creator._id }, { _id: 1 });
   var classIds = studentClasses.map(c => c._id);
 
-  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
+  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -313,7 +313,8 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
       regEndTime : tests[x].regEndTime,
       resultTime : tests[x].resultTime,
       maxmarks : tests[x].maxmarks,
-      duration : tests[x].duration
+      duration : tests[x].duration,
+      targetClass: tests[x].targetClass
     };
   }
 
@@ -338,7 +339,27 @@ var getUpcomingTestforStudent = async(req,res,next) => {
   var studentClasses = await classModel.find({ students: creator._id }, { _id: 1 });
   var classIds = studentClasses.map(c => c._id);
 
-  var tests = await testModel.find({ organizationId: creator.organizationId, endTime:{$gt:Date.now()}, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).sort({startTime:1}).catch(err=>{
+  var registeredList = await testRegistrationModel.find({user:creator._id}).catch(err=>{
+    console.log(err);
+    res.json({
+      success : false,
+      message : 'Internal server error'
+    });
+    return;
+  });
+
+  var reassignedTestIds = registeredList
+    .filter(reg => reg.reassignEndTime && new Date(reg.reassignEndTime).getTime() > Date.now())
+    .map(reg => reg.test);
+
+  var tests = await testModel.find({ 
+    organizationId: creator.organizationId, 
+    $or: [
+      { endTime:{$gt:Date.now()} },
+      { _id: { $in: reassignedTestIds } }
+    ],
+    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }]
+  }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -348,15 +369,6 @@ var getUpcomingTestforStudent = async(req,res,next) => {
   });
 
   var testlist = [];
-  var registeredList = await testRegistrationModel.find({user:creator._id},{test:1}).catch(err=>{
-    console.log(err);
-    res.json({
-      success : false,
-      message : 'Internal server error'
-    });
-    return;
-  });
-
 
   for(x in tests) {
     var correctStatus = getTestStatus(tests[x]);
@@ -364,17 +376,18 @@ var getUpcomingTestforStudent = async(req,res,next) => {
       updateStatus(tests[x],correctStatus);
       tests[x].status = correctStatus;
     }
-    var isReg = registeredList.find((test,index)=>(test.test.toString() == tests[x]._id.toString()));
-    if(isReg || !tests[x].regStartTime) {
+    var regEntry = registeredList.find((test,index)=>(test.test.toString() == tests[x]._id.toString()));
+    if(regEntry || !tests[x].regStartTime) {
       testlist.push({
         _id : tests[x]._id,
         title : tests[x].title,
         status : tests[x].status,
         startTime : tests[x].startTime,
-        endTime : tests[x].endTime,
+        endTime : regEntry && regEntry.reassignEndTime && new Date(regEntry.reassignEndTime).getTime() > Date.now() ? regEntry.reassignEndTime : tests[x].endTime,
         resultTime : tests[x].resultTime,
         maxmarks : tests[x].maxmarks,
-        duration : tests[x].duration
+        duration : tests[x].duration,
+        targetClass: tests[x].targetClass
       });
     }
   }
@@ -418,21 +431,48 @@ var getTestDetailsFromId = (req,res,next) => {
         test.status = correctStatus;
       }
       if(req.user.usertype == 'STUDENT') {
-        res.json({
-          success : true,
-          test : {
-            _id : test._id,
-            title : test.title,
-            status : test.status,
-            startTime : test.startTime,
-            endTime : test.endTime,
-            regStartTime : test.regStartTime,
-            regEndTime : test.regEndTime,
-            resultTime : test.resultTime,
-            maxmarks : test.maxmarks,
-            duration : test.duration
+        // Check if this student has an active reassign window
+        testRegistrationModel.findOne({ test: test._id, user: creator._id }).then(reg => {
+          var effectiveStatus = test.status;
+          var effectiveEndTime = test.endTime;
+          if (reg && reg.reassignEndTime && new Date(reg.reassignEndTime).getTime() > Date.now()) {
+            // Student is within their reassigned time window - let them take the test
+            effectiveStatus = 'TEST_STARTED';
+            effectiveEndTime = reg.reassignEndTime;
           }
-        })
+          res.json({
+            success : true,
+            test : {
+              _id : test._id,
+              title : test.title,
+              status : effectiveStatus,
+              startTime : test.startTime,
+              endTime : effectiveEndTime,
+              regStartTime : test.regStartTime,
+              regEndTime : test.regEndTime,
+              resultTime : test.resultTime,
+              maxmarks : test.maxmarks,
+              duration : test.duration
+            }
+          });
+        }).catch(err => {
+          console.log(err);
+          res.json({
+            success : true,
+            test : {
+              _id : test._id,
+              title : test.title,
+              status : test.status,
+              startTime : test.startTime,
+              endTime : test.endTime,
+              regStartTime : test.regStartTime,
+              regEndTime : test.regEndTime,
+              resultTime : test.resultTime,
+              maxmarks : test.maxmarks,
+              duration : test.duration
+            }
+          });
+        });
       } else {
         res.json({
           success : true,
@@ -639,9 +679,24 @@ var getAssignedStudents = async (req, res, next) => {
   }
   try {
     const testid = req.body.testid;
-    const registrations = await testRegistrationModel.find({ test: testid });
-    const studentIds = registrations.map(reg => reg.user);
-    res.json({ success: true, studentIds: studentIds });
+    const registrations = await testRegistrationModel.find({ test: testid }).populate('user');
+    const answersheetModel = require('../models/answersheet');
+    
+    const studentsData = await Promise.all(registrations.map(async (reg) => {
+      if (!reg.user) return null; // Safety check
+      const answersheet = await answersheetModel.findOne({ test: testid, student: reg.user._id });
+      return {
+        id: reg.user._id,
+        name: reg.user.name,
+        email: reg.user.email,
+        completed: answersheet ? answersheet.completed : false,
+        started: answersheet ? !!answersheet.startTime : false,
+        score: answersheet ? answersheet.score : 0,
+        reassignEndTime: reg.reassignEndTime || null
+      };
+    }));
+    const studentIds = registrations.map(reg => reg.user ? reg.user._id : null).filter(Boolean);
+    res.json({ success: true, studentsData: studentsData.filter(Boolean), studentIds: studentIds });
   } catch(err) {
     console.log(err);
     res.status(500).json({ success: false, message: "Error fetching assigned students" });
@@ -1046,6 +1101,60 @@ var uploadPoster = async(req, res, next) => {
   }
 }
 
+
+var editTestTime = async (req, res, next) => {
+  if(!req.user || req.user.usertype != 'TEACHER') {
+    return res.status(401).json({ success: false, message: "Permissions not granted!" });
+  }
+  try {
+    const { testid, startTime, endTime } = req.body;
+    var test = await testModel.findById(testid);
+    if (!test) return res.json({ success: false, message: "Test not found" });
+    
+    // Allow editing only if the test hasn't ended yet
+    var now = new Date();
+    if(Date.parse(test.endTime) < now.getTime()) {
+      return res.json({ success: false, message: "Cannot edit time for a test that has already ended" });
+    }
+    
+    test.startTime = new Date(startTime);
+    test.endTime = new Date(endTime);
+    await test.save();
+    
+    res.json({ success: true, message: "Test time updated successfully" });
+  } catch(err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Error updating test time" });
+  }
+}
+
+
+var reassignStudentTest = async (req, res, next) => {
+  if(!req.user || req.user.usertype != 'TEACHER') {
+    return res.status(401).json({ success: false, message: "Permissions not granted!" });
+  }
+  try {
+    const { testid, studentid, newEndTime } = req.body;
+    
+    // Wipe answersheet
+    const answersheetModel = require('../models/answersheet');
+    await answersheetModel.deleteOne({ test: testid, student: studentid });
+    
+    // Update registration with extended time if provided
+    if (newEndTime) {
+      await testRegistrationModel.updateOne(
+        { test: testid, user: studentid },
+        { $set: { reassignEndTime: new Date(newEndTime) } }
+      );
+    }
+    
+    res.json({ success: true, message: "Test reassigned successfully" });
+  } catch(err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Error reassigning test" });
+  }
+}
+
 module.exports = {
   createTest,
   getAllTest,
@@ -1059,6 +1168,8 @@ module.exports = {
   deleteTest,
   assignStudentsToTest,
   getAssignedStudents,
+    editTestTime,
+    reassignStudentTest,
   addExamQuestion,
   editExamQuestion,
   deleteExamQuestion,

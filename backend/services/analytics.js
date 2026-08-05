@@ -6,39 +6,37 @@ const subjectModel = require("../models/subject");
 
 
 
+
 const getStudentDashboardAnalytics = async (req, res, next) => {
-  console.log("=== getStudentDashboardAnalytics called ===");
+  console.log('=== getStudentDashboardAnalytics called ===');
   var creator = req.user || null;
   if(creator == null || req.user.usertype != 'STUDENT') {
-    console.log("Unauthorized or not a student");
     return res.status(401).json({ success: false, message: "Permissions not granted!" });
   }
 
   try {
-    console.log("Fetching answersheets for student:", creator._id);
-    const answersheets = await answersheetModel.find({ student: creator._id, completed: true }).sort({ createdAt: -1 });
-    console.log("Answersheets found:", answersheets.length);
+    const answersheets = await answersheetModel.find({ student: creator._id, completed: true })
+      .populate({
+        path: 'test',
+        populate: { path: 'targetClass' }
+      })
+      .sort({ createdAt: -1 });
 
     if (!answersheets || answersheets.length === 0) {
-      console.log("Returning empty data (no answersheets)");
       return res.json({ success: true, data: [] });
     }
 
-    const testItemPromises = answersheets.map(async (answersheet) => {
-      console.log("Processing answersheet:", answersheet._id, "Test ID:", answersheet.test);
-      const test = await testModel.findById(answersheet.test).populate('targetClass');
-      if (!test) {
-        console.log("Test not found in DB for ID:", answersheet.test);
-        return null;
-      }
-      console.log("Test found:", test.title, "Questions length:", test.questions ? test.questions.length : 0);
+    const validTestItems = [];
+
+    for (const answersheet of answersheets) {
+      const test = answersheet.test;
+      if (!test || !test.questions) continue;
 
       const questions = await questionModel.find({ _id: { $in: test.questions } }).populate('subject');
       
       let totalPossibleMarks = 0;
       let totalTimeSpent = 0;
       let questionTimeAnalytics = [];
-      
       let subjects = {};
 
       for (let i = 0; i < test.questions.length; i++) {
@@ -106,11 +104,11 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
           } else if (q.questionType === 'NUMERICAL') {
             isAttempted = ans.toString().trim() !== '';
             if (isAttempted) {
-               if (parseFloat(ans).toFixed(2) === parseFloat(q.answer).toFixed(2)) isCorrect = true;
+               if (q.answer != null && parseFloat(ans).toFixed(2) === parseFloat(q.answer).toFixed(2)) isCorrect = true;
             }
           } else {
             isAttempted = ans.toString().trim() !== '';
-            if (isAttempted && q.answer.toString().trim() === ans.toString().trim()) {
+            if (isAttempted && q.answer != null && q.answer.toString().trim() === ans.toString().trim()) {
               isCorrect = true;
             }
           }
@@ -130,9 +128,6 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         }
       }
 
-      console.log("Finished questions loop for test", test.title);
-      console.log("Total Possible Marks:", totalPossibleMarks);
-
       for (let sub in subjects) {
         let stat = subjects[sub];
         stat.accuracy = stat.totalPossibleMarks > 0 ? (stat.obtainedMarks / stat.totalPossibleMarks) : 0;
@@ -146,7 +141,7 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         stat.avgRevisits = stat.questionCount > 0 ? (stat.totalRevisits / stat.questionCount) : 0;
       }
 
-      return {
+      validTestItems.push({
         testId: test._id,
         testTitle: test.title,
         className: test.targetClass ? test.targetClass.name : 'Unknown',
@@ -154,20 +149,16 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         totalPossibleMarks: totalPossibleMarks,
         totalTimeSpent: totalTimeSpent,
         subjects: subjects,
-        questionTimeAnalytics: questionTimeAnalytics
-      };
-    });
-
-    const testItems = await Promise.all(testItemPromises);
-    const validTestItems = testItems.filter(t => t !== null);
-    
-    console.log("Final validTestItems length:", validTestItems.length);
+        questionTimeAnalytics: questionTimeAnalytics,
+        createdAt: answersheet.createdAt
+      });
+    }
 
     res.json({ success: true, data: validTestItems });
 
   } catch(err) {
     console.error("Error in getStudentDashboardAnalytics:", err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: err.message, stack: err.stack });
   }
 }
 

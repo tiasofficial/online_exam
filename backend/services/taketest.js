@@ -2,6 +2,7 @@ var answersheetModel = require('../models/answersheet');
 const questionModel = require('../models/question');
 var testModel = require('../models/test');
 const testRegistrationModel = require('../models/testRegistration');
+const classModel = require('../models/class');
 
 var getTestStatus = (test) => {
   if(test.status === 'CANCELLED')
@@ -22,9 +23,9 @@ var getTestStatus = (test) => {
   return status;
 }
 
-var getAttemptEndTime = (test,startAttemptTime) => {
+var getAttemptEndTime = (test, startAttemptTime, reassignEndTime) => {
   var regularEndTime = new Date(Date.parse(startAttemptTime) + (test.duration*1000));
-  var endTime = new Date(Date.parse(test.endTime));
+  var endTime = new Date(Date.parse(reassignEndTime || test.endTime));
   return regularEndTime < endTime ? regularEndTime : endTime; 
 }
 
@@ -154,18 +155,34 @@ var startTestForStudent = async(req,res,next)=> {
     return;
   }
 
-  testModel.findById({_id:req.body.testid})
-  .then(test => {
+  testModel.findById({_id:req.body.testid}).populate('targetClass')
+  .then(async test => {
     if(test) {
-      var correctStatus = getTestStatus(test);
-      if(correctStatus !== test.status) {
-        updateStatus(test,correctStatus);
-        test.status = correctStatus;
-      }
-      if(test.status === 'TEST_STARTED') {
+      
+        var correctStatus = getTestStatus(test);
+        if(correctStatus !== test.status) {
+          updateStatus(test,correctStatus);
+          test.status = correctStatus;
+        }
+
+        // Check if student has reassigned time
+        let hasReassignedTime = false;
+        let reassignEndTime = null;
+        try {
+           const reg = await testRegistrationModel.findOne({ user: creator._id, test: test._id });
+           if (reg && reg.reassignEndTime && Date.parse(reg.reassignEndTime) > Date.now()) {
+               hasReassignedTime = true;
+               reassignEndTime = reg.reassignEndTime;
+           }
+        } catch (err) {
+           console.log(err);
+        }
+
+        if(test.status === 'TEST_STARTED' || hasReassignedTime) {
+
         const classModel = require('../models/class');
         if (test.targetClass) {
-          classModel.findById(test.targetClass).then(classObj => {
+          classModel.findById(test.targetClass._id || test.targetClass).then(classObj => {
             if (!classObj || !classObj.students.includes(creator._id)) {
               return res.json({ success: false, message: "You are not enrolled in the class for this test" });
             }
@@ -182,7 +199,7 @@ var startTestForStudent = async(req,res,next)=> {
             answersheetModel.find({student:creator._id,test:req.body.testid})
             .then(answersheets => {
               if(answersheets.length > 0) {
-                if(Date.now() > getAttemptEndTime(test,answersheets[0].startTime)) {
+              if(Date.now() > getAttemptEndTime(test,answersheets[0].startTime, reassignEndTime)) {
                   answersheets[0].completed = true;
                   answersheetModel.findByIdAndUpdate(answersheets[0]._id, {completed: true})
                   .then(()=>{
@@ -204,7 +221,8 @@ var startTestForStudent = async(req,res,next)=> {
                     success : true,
                     message : 'test is already started',
                     answersheet : answersheets[0],
-                    questions : test.questions 
+                    questions : test.questions,
+                    test: test
                   })
                 }
               } else {
@@ -224,7 +242,8 @@ var startTestForStudent = async(req,res,next)=> {
                       success : true,
                       message : 'Test started',
                       answersheet : newdata,
-                      questions : test.questions
+                      questions : test.questions,
+                      test: test
                     })
                   }
                 })
