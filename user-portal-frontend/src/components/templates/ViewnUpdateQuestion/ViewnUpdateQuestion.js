@@ -73,6 +73,12 @@ class ViewnUpdateQuestion extends React.Component {
       optImg2: null,
       optImg3: null,
       optImg4: null,
+      delete_bodyImage: false,
+      delete_explanationImage: false,
+      delete_optImg1: false,
+      delete_optImg2: false,
+      delete_optImg3: false,
+      delete_optImg4: false,
       submitting: false
     }
   }
@@ -212,6 +218,13 @@ class ViewnUpdateQuestion extends React.Component {
     if(this.state.optImg3) formData.append('optImg3', this.state.optImg3);
     if(this.state.optImg4) formData.append('optImg4', this.state.optImg4);
     
+    if(this.state.delete_bodyImage) formData.append('delete_bodyImage', 'true');
+    if(this.state.delete_explanationImage) formData.append('delete_explanationImage', 'true');
+    if(this.state.delete_optImg1) formData.append('delete_optImg1', 'true');
+    if(this.state.delete_optImg2) formData.append('delete_optImg2', 'true');
+    if(this.state.delete_optImg3) formData.append('delete_optImg3', 'true');
+    if(this.state.delete_optImg4) formData.append('delete_optImg4', 'true');
+    
     this.setState({ submitting: true });
     this.props.updateQuestionAction(formData).then(() => {
       this.setState({ submitting: false });
@@ -251,9 +264,18 @@ class ViewnUpdateQuestion extends React.Component {
                 <CloseIcon fontSize="small" />
               </IconButton>
             </div>
+            </div>
           ) : (
-             this.props.question.bodyImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>
+             this.props.question.bodyImage && !this.state.delete_bodyImage && (
+               <div style={{display: 'flex', alignItems: 'center'}}>
+                 <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                 <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_bodyImage: true }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                   <CloseIcon fontSize="small" />
+                 </IconButton>
+               </div>
+             )
           )}
+          {this.state.delete_bodyImage && !this.state.bodyImage && <p style={{fontSize: '12px', color: '#d32f2f'}}>Image will be removed upon update.</p>}
         </div>
         <br/>
         <InputLabel htmlFor='questionType-label' className={this.props.classes.optionInput}>Question Type</InputLabel>
@@ -287,14 +309,24 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg1')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg1" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg1 && (
+          {this.state.optImg1 ? (
             <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
               <span>✓ Attached</span>
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg1: null }); }} style={{ color: '#d32f2f' }}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             </div>
+          ) : (
+            this.props.question.optionImages && this.props.question.optionImages[0] && !this.state.delete_optImg1 && (
+              <div style={{display: 'flex', alignItems: 'center', marginTop: '5px'}}>
+                <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_optImg1: true }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            )
           )}
+          {this.state.delete_optImg1 && !this.state.optImg1 && <p style={{fontSize: '12px', color: '#d32f2f', margin: 0}}>Image will be removed upon update.</p>}
         </div>
         </div>
         
@@ -312,14 +344,24 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg2')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg2" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg2 && (
+          {this.state.optImg2 ? (
             <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
               <span>✓ Attached</span>
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg2: null }); }} style={{ color: '#d32f2f' }}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             </div>
+          ) : (
+            this.props.question.optionImages && this.props.question.optionImages[1] && !this.state.delete_optImg2 && (
+              <div style={{display: 'flex', alignItems: 'center', marginTop: '5px'}}>
+                <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_optImg2: true }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            )
           )}
+          {this.state.delete_optImg2 && !this.state.optImg2 && <p style={{fontSize: '12px', color: '#d32f2f', margin: 0}}>Image will be removed upon update.</p>}
         </div>
         </div>
         
@@ -337,14 +379,24 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg3')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg3" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg3 && (
+          {this.state.optImg3 ? (
             <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
               <span>✓ Attached</span>
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg3: null }); }} style={{ color: '#d32f2f' }}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             </div>
+          ) : (
+            this.props.question.optionImages && this.props.question.optionImages[2] && !this.state.delete_optImg3 && (
+              <div style={{display: 'flex', alignItems: 'center', marginTop: '5px'}}>
+                <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_optImg3: true }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            )
           )}
+          {this.state.delete_optImg3 && !this.state.optImg3 && <p style={{fontSize: '12px', color: '#d32f2f', margin: 0}}>Image will be removed upon update.</p>}
         </div>
         </div>
         
@@ -362,14 +414,24 @@ class ViewnUpdateQuestion extends React.Component {
         <div style={{ display: 'inline-block', marginLeft: '20px' }} onPaste={(e) => this.handlePaste(e, 'optImg4')}>
           <Typography variant="body2">Image (paste): </Typography>
           <input type="file" name="optImg4" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.optImg4 && (
+          {this.state.optImg4 ? (
             <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
               <span>✓ Attached</span>
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ optImg4: null }); }} style={{ color: '#d32f2f' }}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             </div>
+          ) : (
+            this.props.question.optionImages && this.props.question.optionImages[3] && !this.state.delete_optImg4 && (
+              <div style={{display: 'flex', alignItems: 'center', marginTop: '5px'}}>
+                <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_optImg4: true }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            )
           )}
+          {this.state.delete_optImg4 && !this.state.optImg4 && <p style={{fontSize: '12px', color: '#d32f2f', margin: 0}}>Image will be removed upon update.</p>}
         </div>
         </div>
         <br/>
@@ -492,7 +554,7 @@ class ViewnUpdateQuestion extends React.Component {
             <img src={this.state.explanationImage.startsWith('http') ? this.state.explanationImage : apis.BASE + this.state.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
           )}
           <input key={this.state.fileInputKey} type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
-          {this.state.explanationImage ? (
+          {this.state.explanationImage && typeof this.state.explanationImage !== 'string' ? (
             <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px', marginTop: '5px' }}>
               <span>✓ New Image attached: {this.state.explanationImage.name || 'Pasted Image'}</span>
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ explanationImage: null }); }} style={{ color: '#d32f2f' }}>
@@ -500,8 +562,16 @@ class ViewnUpdateQuestion extends React.Component {
               </IconButton>
             </div>
           ) : (
-            this.props.question.explanationImage && <p style={{fontSize: '12px', color: 'gray'}}>(Current image will be replaced if new one is selected)</p>
+            this.props.question.explanationImage && !this.state.delete_explanationImage && (
+              <div style={{display: 'flex', alignItems: 'center'}}>
+                <p style={{fontSize: '12px', color: 'gray', margin: 0}}>(Current image will be replaced if new one is selected)</p>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); this.setState({ delete_explanationImage: true, explanationImage: null }); }} style={{ color: '#d32f2f', marginLeft: '10px', border: '1px solid #d32f2f', padding: '2px' }} title="Remove existing image">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            )
           )}
+          {this.state.delete_explanationImage && typeof this.state.explanationImage !== 'object' && <p style={{fontSize: '12px', color: '#d32f2f'}}>Image will be removed upon update.</p>}
         </div>
         
         <div className={this.props.classes.btnContainer}>

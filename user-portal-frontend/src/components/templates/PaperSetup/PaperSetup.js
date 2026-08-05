@@ -281,6 +281,19 @@ class PaperSetup extends Component {
 
   render() {
     const { classes, onFinish } = this.props;
+
+    let currentSubjectName = '';
+    const currentQ = this.state.questions.length;
+    if (this.state.targetClassName === 'JEE-Mains') {
+       if (currentQ < 25) currentSubjectName = 'Physics';
+       else if (currentQ < 50) currentSubjectName = 'Chemistry';
+       else currentSubjectName = 'Mathematics';
+    } else if (this.state.targetClassName === 'NEET') {
+       if (currentQ < 45) currentSubjectName = 'Physics';
+       else if (currentQ < 90) currentSubjectName = 'Chemistry';
+       else currentSubjectName = 'Biology';
+    }
+
     return (
       <Paper className={classes.root}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -359,7 +372,14 @@ class PaperSetup extends Component {
         
         <form onSubmit={this.handleAddQuestion} className={classes.form}>
           <div className={classes.optionContainer}>
-            <Typography variant="h6">Question</Typography>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <Typography variant="h6">Question {currentQ + 1}</Typography>
+              {currentSubjectName && (
+                <div style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '4px 12px', borderRadius: '16px', fontWeight: 'bold', fontSize: '0.9rem', border: '1px solid #bae6fd' }}>
+                  Target Subject: {currentSubjectName}
+                </div>
+              )}
+            </div>
             <TextField fullWidth label="Question Text" name="body" value={this.state.body} onChange={this.handleInputChange} margin="normal" variant="outlined" />
             {this.renderImageUpload('bodyImage', 'Question Image')}
           </div>
@@ -456,8 +476,13 @@ class PaperSetup extends Component {
           {this.renderImageUpload('explanationImage', 'Explanation Image')}
 
           <div className={classes.btnContainer}>
-            <Button variant="contained" color="primary" type="submit" disabled={this.state.submitting}>
-              {this.state.submitting ? <CircularProgress size={24} color="inherit" /> : 'Add Question'}
+            <Button variant="contained" color="primary" type="submit" disabled={this.state.submitting} style={{ minWidth: '150px' }}>
+              {this.state.submitting ? (
+                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CircularProgress size={20} color="inherit" />
+                    Uploading...
+                 </span>
+              ) : 'Add Question'}
             </Button>
             {!this.props.hideFinishButton && (
               <Button
