@@ -1107,7 +1107,7 @@ var editTestTime = async (req, res, next) => {
     return res.status(401).json({ success: false, message: "Permissions not granted!" });
   }
   try {
-    const { testid, startTime, endTime } = req.body;
+    const { testid, startTime, endTime, resultTime } = req.body;
     var test = await testModel.findById(testid);
     if (!test) return res.json({ success: false, message: "Test not found" });
     
@@ -1116,9 +1116,17 @@ var editTestTime = async (req, res, next) => {
     if(Date.parse(test.endTime) < now.getTime()) {
       return res.json({ success: false, message: "Cannot edit time for a test that has already ended" });
     }
+
+    // Validate resultTime is after endTime if provided
+    if (resultTime && new Date(resultTime) <= new Date(endTime)) {
+      return res.json({ success: false, message: "Result Time must be after End Time" });
+    }
     
     test.startTime = new Date(startTime);
     test.endTime = new Date(endTime);
+    if (resultTime) {
+      test.resultTime = new Date(resultTime);
+    }
     await test.save();
     
     res.json({ success: true, message: "Test time updated successfully" });
