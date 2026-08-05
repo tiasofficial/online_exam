@@ -55,6 +55,8 @@ router.post('/createTest',testService.createTest);
 router.post('/deleteTest',testService.deleteTest);
 router.post('/assignStudentsToTest',testService.assignStudentsToTest);
 router.post('/getAssignedStudents',testService.getAssignedStudents);
+router.post('/editTestTime',testService.editTestTime);
+router.post('/reassignStudentTest',testService.reassignStudentTest);
 router.post('/getTestQuestionsForTeacher',testService.getTestQuestionsForTeacher);
 router.post('/getTestResultsForTeacher',resultService.getTestResultsForTeacher);
 router.post('/getStudentResultDetailsForTeacher',resultService.getStudentResultDetailsForTeacher);
