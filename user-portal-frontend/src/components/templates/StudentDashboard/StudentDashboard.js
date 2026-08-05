@@ -202,7 +202,8 @@ class StudentDashboard extends Component {
       });
       console.log("Analytics API Response:", response.data);
       if (response.data.success) {
-        this.setState({ analytics: response.data.data, loading: false });
+        let sortedAnalytics = (response.data.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        this.setState({ analytics: sortedAnalytics, loading: false });
       } else {
         this.setState({ error: response.data.message, loading: false });
       }
