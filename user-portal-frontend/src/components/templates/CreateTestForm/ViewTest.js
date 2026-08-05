@@ -118,10 +118,45 @@ class ViewTest extends React.Component {
   }
 
   handleEditTimeSave = () => {
+    const startMs = new Date(this.state.editStartTime).getTime();
+    const endMs = new Date(this.state.editEndTime).getTime();
+    const durationMs = this.props.testDetails.test.duration * 1000; // duration is in seconds
+
+    // Validate end > start
+    if (endMs <= startMs) {
+      alert('Test End Time must be after Test Start Time.');
+      return;
+    }
+
+    // Validate result time after end time
     if (this.state.editResultTime && new Date(this.state.editResultTime) <= new Date(this.state.editEndTime)) {
       alert('Result Time must be after the Test End Time.');
       return;
     }
+
+    // Warn if window is shorter than duration
+    const windowMs = endMs - startMs;
+    if (windowMs < durationMs) {
+      const windowMin = Math.round(windowMs / 60000);
+      const durationMin = Math.round(durationMs / 60000);
+      const fix = window.confirm(
+        `⚠️ Warning: The test window (${windowMin} min) is shorter than the test duration (${durationMin} min).\n` +
+        `Students will get less time than intended.\n\n` +
+        `Click OK to auto-fix End Time to Start + ${durationMin} min, or Cancel to keep your values.`
+      );
+      if (fix) {
+        const fixedEnd = new Date(startMs + durationMs);
+        const pad = (n) => String(n).padStart(2, '0');
+        const fixedEndStr = `${fixedEnd.getFullYear()}-${pad(fixedEnd.getMonth()+1)}-${pad(fixedEnd.getDate())}T${pad(fixedEnd.getHours())}:${pad(fixedEnd.getMinutes())}`;
+        this.setState({ editEndTime: fixedEndStr }, () => this._doSaveEditTime());
+        return;
+      }
+    }
+
+    this._doSaveEditTime();
+  }
+
+  _doSaveEditTime = () => {
     const details = {
       testid: this.props.testDetails.test._id,
       startTime: this.state.editStartTime,
@@ -129,9 +164,9 @@ class ViewTest extends React.Component {
       resultTime: this.state.editResultTime || null,
     };
     this.props.editTestTimeAction(details, () => {
-      this.setState({ 
-        openEditTime: false, 
-        startTime: new Date(this.state.editStartTime).toLocaleString(), 
+      this.setState({
+        openEditTime: false,
+        startTime: new Date(this.state.editStartTime).toLocaleString(),
         endTime: new Date(this.state.editEndTime).toLocaleString(),
         resultTime: this.state.editResultTime ? new Date(this.state.editResultTime).toLocaleString() : this.state.resultTime
       });
@@ -329,6 +364,15 @@ class ViewTest extends React.Component {
         <Dialog open={this.state.openEditTime} onClose={() => this.setState({openEditTime: false})} fullWidth>
           <DialogTitle>Edit Test Time</DialogTitle>
           <DialogContent>
+            {/* Duration warning banner */}
+            {this.state.editStartTime && this.state.editEndTime && (
+              (new Date(this.state.editEndTime).getTime() - new Date(this.state.editStartTime).getTime()) <
+              (this.props.testDetails.test.duration * 1000)
+            ) && (
+              <Typography variant="body2" style={{ color: '#e65100', background: '#fff3e0', padding: '8px 12px', borderRadius: '6px', marginBottom: '8px' }}>
+                ⚠️ Test window is shorter than the {Math.round(this.props.testDetails.test.duration / 60)}-minute duration. Students will get less time than intended.
+              </Typography>
+            )}
             <TextField label="Test Start Time" type="datetime-local" fullWidth margin="dense" 
               value={this.state.editStartTime} onChange={(e) => this.setState({editStartTime: e.target.value})} 
               InputLabelProps={{ shrink: true }} />
@@ -339,6 +383,7 @@ class ViewTest extends React.Component {
               value={this.state.editResultTime} onChange={(e) => this.setState({editResultTime: e.target.value})} 
               InputLabelProps={{ shrink: true }}
               helperText="Set when results become visible to students. Must be after End Time."
+              error={!!(this.state.editResultTime && new Date(this.state.editResultTime) <= new Date(this.state.editEndTime))}
             />
           </DialogContent>
           <DialogActions>
