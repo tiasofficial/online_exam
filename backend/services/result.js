@@ -52,7 +52,7 @@ const getAllCompletedTest = (req,res,next) => {
   })
 }
 
-const getResultMainDetailsByTestId = (req, res, next) => {
+const getResultMainDetailsByTestId = async (req, res, next) => {
   var creator = req.user || null;
   if(creator == null || req.user.usertype != 'STUDENT') {
     res.status(401).json({
@@ -74,96 +74,76 @@ const getResultMainDetailsByTestId = (req, res, next) => {
     return;
   }
 
-  answersheetModel.find({student:creator._id, test:req.body.testid, completed:true})
-  .then(answersheets => {
-    if(answersheets[0]) {
-      testModel.findById({_id: req.body.testid}).populate('targetClass')
-      .then(test => {
-        if(test) {
-          var correctStatus = testService.getTestStatus(test);
-          if(correctStatus !== test.status) {
-            testService.updateStatus(test,correctStatus);
-            test.status = correctStatus;
-          }
-          let subjectIds = [...(test.subjects || [])];
-          if (test.targetSubject) {
-            subjectIds.push(test.targetSubject);
-          }
-          subjectModel.find({_id:{$in:subjectIds}},{name:1})
-          .then(async subjects=> {
-            subs = subjects.map(sub=>(sub.name)).join(', ');
-
-            let studentRank = null;
-            let leaderboard = [];
-            if (test.status === 'RESULT_DECLARED') {
-              const allAnswersheets = await answersheetModel.find({ test: test._id, completed: true }).populate('student', 'username email');
-              allAnswersheets.sort((a, b) => b.score - a.score);
-              leaderboard = allAnswersheets.map((sheet, index) => {
-                if (sheet.student._id.toString() === creator._id.toString()) {
-                  studentRank = index + 1;
-                }
-                return {
-                  rank: index + 1,
-                  studentName: sheet.student.username,
-                  score: sheet.score,
-                  isCurrentUser: sheet.student._id.toString() === creator._id.toString()
-                };
-              });
-            }
-
-            res.json({
-              success : true,
-              result : {
-                title : test.title,
-                status : test.status,
-                maxmarks : test.maxmarks,
-                subjects : subs,
-                score : answersheets[0].score,
-                questions : test.questions,
-                answers : answersheets[0].answers,
-                timeSpent : answersheets[0].timeSpent,
-                revisitCounts : answersheets[0].revisitCounts,
-                rank: studentRank,
-                leaderboard: leaderboard,
-                className: test.targetClass ? test.targetClass.name : '',
-                examType: test.targetClass ? test.targetClass.examType : ''
-              }
-            })
-          }).catch(err=> {
-            console.log(err);
-            res.json({
-              success : false,
-              message : 'Internal server error'
-            })
-          })
-        } else {
-          res.json({
-            success : false,
-            message : 'Answer sheet not found'
-          })
-        }
-      }).catch(err=> {
-        console.log(err);
-        res.json({
-          success : false,
-          message : 'Internal server error'
-        })
-      })
-    } else {
-      res.json({
-        success : false,
-        message : 'Answer sheet not found'
-      })
+  try {
+    const testRegistrationModel = require('../models/testRegistration');
+    const answersheets = await answersheetModel.find({student:creator._id, test:req.body.testid, completed:true});
+    
+    if (!answersheets[0]) {
+      return res.json({ success: false, message: 'Answer sheet not found' });
     }
-  })
-  .catch(err=> {
-    console.log(err);
+
+    const test = await testModel.findById(req.body.testid).populate('targetClass');
+    if (!test) {
+      return res.json({ success: false, message: 'Test not found' });
+    }
+
+    var correctStatus = testService.getTestStatus(test);
+    if(correctStatus !== test.status) {
+      testService.updateStatus(test, correctStatus);
+      test.status = correctStatus;
+    }
+
+    // Check if this student was reassigned — if so, result is available immediately after completion
+    const reg = await testRegistrationModel.findOne({ test: test._id, user: creator._id });
+    const isReassigned = !!(reg && reg.reassignEndTime);
+    const effectiveResultDeclared = (test.status === 'RESULT_DECLARED') || isReassigned;
+
+    let subjectIds = [...(test.subjects || [])];
+    if (test.targetSubject) subjectIds.push(test.targetSubject);
+    const subjects = await subjectModel.find({_id:{$in:subjectIds}},{name:1});
+    const subs = subjects.map(sub => sub.name).join(', ');
+
+    let studentRank = null;
+    let leaderboard = [];
+    if (test.status === 'RESULT_DECLARED') {
+      // Full leaderboard only when globally declared
+      const allAnswersheets = await answersheetModel.find({ test: test._id, completed: true }).populate('student', 'username email');
+      allAnswersheets.sort((a, b) => b.score - a.score);
+      leaderboard = allAnswersheets.map((sheet, index) => {
+        if (sheet.student._id.toString() === creator._id.toString()) {
+          studentRank = index + 1;
+        }
+        return {
+          rank: index + 1,
+          studentName: sheet.student.username,
+          score: sheet.score,
+          isCurrentUser: sheet.student._id.toString() === creator._id.toString()
+        };
+      });
+    }
+
     res.json({
-      success : false,
-      message : 'Internal server error'
-    })
-    return;
-  })
+      success: true,
+      result: {
+        title: test.title,
+        status: effectiveResultDeclared ? 'RESULT_DECLARED' : test.status,
+        maxmarks: test.maxmarks,
+        subjects: subs,
+        score: answersheets[0].score,
+        questions: test.questions,
+        answers: answersheets[0].answers,
+        timeSpent: answersheets[0].timeSpent,
+        revisitCounts: answersheets[0].revisitCounts,
+        rank: studentRank,
+        leaderboard: leaderboard,
+        className: test.targetClass ? test.targetClass.name : '',
+        examType: test.targetClass ? test.targetClass.examType : ''
+      }
+    });
+  } catch(err) {
+    console.log(err);
+    res.json({ success: false, message: 'Internal server error' });
+  }
 
 }
 
