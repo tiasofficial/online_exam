@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import { Typography, Paper, Button, Modal, TextField, FormControl, InputLabel, Select, MenuItem, Box, Checkbox, ListItemText } from '@material-ui/core';
+import { Typography, Paper, Button, Modal, TextField, FormControl, InputLabel, Select, MenuItem, Box, Checkbox, ListItemText, CircularProgress, IconButton } from '@material-ui/core';
+import CloseIcon from '@material-ui/icons/Close';
 import axios from 'axios';
 import apis from '../../../helper/Apis';
 import Auth from '../../../helper/Auth';
@@ -58,6 +59,7 @@ class PaperPreview extends Component {
     this.state = {
       questions: [],
       editingQuestion: null, // Holds the question currently being edited
+      submitting: false,
       editData: {}
     };
   }
@@ -124,6 +126,54 @@ class PaperPreview extends Component {
     });
   }
 
+
+  renderImageField = (name, label, existingImageUrl, deleteStateKey) => {
+    const isDeleted = this.state.editData[deleteStateKey];
+    const newFile = this.state.editData[name];
+
+    return (
+      <div style={{ marginTop: '15px' }}>
+        <Typography variant="body2">{label}:</Typography>
+        
+        {existingImageUrl && !isDeleted && !newFile && (
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '10px' }}>
+            <img src={getImageUrl(existingImageUrl)} alt={label} style={{ maxHeight: '100px', display: 'block', borderRadius: '4px' }} />
+            <IconButton 
+              size="small" 
+              onClick={() => this.setState({ editData: { ...this.state.editData, [deleteStateKey]: true } })} 
+              style={{ position: 'absolute', top: -10, right: -10, backgroundColor: '#fff', boxShadow: '0 0 5px rgba(0,0,0,0.3)', color: '#d32f2f' }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </div>
+        )}
+
+        {existingImageUrl && isDeleted && !newFile && (
+          <Typography variant="caption" style={{ color: '#d32f2f', display: 'block', marginBottom: '10px' }}>Existing image will be deleted.</Typography>
+        )}
+
+        <div style={{
+            border: '2px dashed #ccc',
+            borderRadius: '4px',
+            padding: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+        }}>
+          <input type="file" name={name} accept="image/*" onChange={this.handleFileChange} />
+          {newFile && (
+            <div style={{ color: '#2e7d32', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e8f5e9', padding: '4px 8px', borderRadius: '4px' }}>
+              <span>📷 New image attached: {newFile.name}</span>
+              <IconButton size="small" onClick={() => this.setState({ editData: { ...this.state.editData, [name]: null } })} style={{ color: '#d32f2f' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   handleEditSubmit = async (e) => {
     e.preventDefault();
     const { option1, option2, option3, option4, questionType } = this.state.editData;
@@ -160,7 +210,8 @@ class PaperPreview extends Component {
       return;
     }
 
-    const formData = new FormData();
+    this.setState({ submitting: true });
+      const formData = new FormData();
     formData.append('questionId', this.state.editingQuestion._id);
     formData.append('testId', this.props.testId);
     formData.append('body', this.state.editData.body);
@@ -174,6 +225,12 @@ class PaperPreview extends Component {
     formData.append('explanation', this.state.editData.explanation);
 
     if (this.state.editData.bodyImage) formData.append('bodyImage', this.state.editData.bodyImage);
+      if (this.state.editData.delete_bodyImage) formData.append('delete_bodyImage', 'true');
+      if (this.state.editData.delete_explanationImage) formData.append('delete_explanationImage', 'true');
+      if (this.state.editData.delete_optImg1) formData.append('delete_optImg1', 'true');
+      if (this.state.editData.delete_optImg2) formData.append('delete_optImg2', 'true');
+      if (this.state.editData.delete_optImg3) formData.append('delete_optImg3', 'true');
+      if (this.state.editData.delete_optImg4) formData.append('delete_optImg4', 'true');
     if (this.state.editData.explanationImage) formData.append('explanationImage', this.state.editData.explanationImage);
     if (this.state.editData.optImg1) formData.append('optImg1', this.state.editData.optImg1);
     if (this.state.editData.optImg2) formData.append('optImg2', this.state.editData.optImg2);
@@ -282,11 +339,7 @@ class PaperPreview extends Component {
             {editingQuestion && (
               <form onSubmit={this.handleEditSubmit}>
                 <TextField fullWidth label="Question Text" name="body" value={editData.body} onChange={this.handleInputChange} margin="normal" variant="outlined" />
-                <div className={classes.fileInputContainer}>
-                  <Typography variant="body2">Replace Image:</Typography>
-                  <input type="file" name="bodyImage" accept="image/*" onChange={this.handleFileChange} />
-                  {editingQuestion.bodyImage && <Typography variant="caption" color="secondary">(Current image will be replaced if new one is selected)</Typography>}
-                </div>
+                {this.renderImageField('bodyImage', 'Replace Image (Question Body)', editingQuestion.bodyImage, 'delete_bodyImage')}
 
                 <FormControl variant="outlined" margin="normal" fullWidth>
                   <InputLabel>Question Type</InputLabel>
@@ -300,10 +353,7 @@ class PaperPreview extends Component {
                 {editData.questionType !== 'NUMERICAL' && [1, 2, 3, 4].map(num => (
                   <div key={num}>
                     <TextField fullWidth label={`Option ${num} Text`} name={`option${num}`} value={editData[`option${num}`]} onChange={this.handleInputChange} margin="dense" variant="outlined" />
-                    <div className={classes.fileInputContainer} style={{ marginBottom: '10px' }}>
-                      <Typography variant="body2">Replace Image:</Typography>
-                      <input type="file" name={`optImg${num}`} accept="image/*" onChange={this.handleFileChange} />
-                    </div>
+                    {this.renderImageField(`optImg${num}`, `Replace Image (Option ${num})`, editingQuestion[`optionImages`] && editingQuestion[`optionImages`][num-1], `delete_optImg${num}`)}
                   </div>
                 ))}
 
@@ -355,17 +405,18 @@ class PaperPreview extends Component {
                   placeholder="Explain why the answer is correct..."
                 />
                 
-                <div style={{ marginTop: '15px' }}>
-                  <Typography variant="body2">Explanation Image:</Typography>
-                  {this.state.editData.explanationImage && typeof this.state.editData.explanationImage === 'string' && (
-                    <img src={this.state.editData.explanationImage.startsWith('http') ? this.state.editData.explanationImage : apis.BASE + this.state.editData.explanationImage} alt="explanation" style={{ maxHeight: '60px', display: 'block', marginBottom: '5px' }} />
-                  )}
-                  <input type="file" name="explanationImage" accept="image/*" onChange={this.handleFileChange} />
-                </div>
+                {this.renderImageField('explanationImage', 'Explanation Image', editingQuestion.explanationImage, 'delete_explanationImage')}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <Button onClick={this.handleCloseModal} color="default">Cancel</Button>
-                  <Button type="submit" variant="contained" color="primary">Save Changes</Button>
+                  <Button type="submit" variant="contained" color="primary" disabled={this.state.submitting} style={{ minWidth: '150px' }}>
+                      {this.state.submitting ? (
+                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <CircularProgress size={20} color="inherit" />
+                            Uploading...
+                         </span>
+                      ) : 'Save Changes'}
+                    </Button>
                 </div>
               </form>
             )}
