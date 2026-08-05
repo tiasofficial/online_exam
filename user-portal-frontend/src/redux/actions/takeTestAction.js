@@ -37,7 +37,7 @@ export const startTestAction = (details, test) => {
           dispatch({
             type: ActionTypes.START_TEST,
             payload : {
-              test : test,
+              test : response.data.test || test,
               answersheet : {...response.data.answersheet,startTime:queResponse.data.startTime},
               questions : queResponse.data.questions
             }
@@ -48,7 +48,7 @@ export const startTestAction = (details, test) => {
           dispatch({
             type: ActionTypes.START_TEST,
             payload : {
-              test : test,
+              test : response.data.test || test,
               answersheet : {...response.data.answersheet,startTime:queResponse.data.startTime, answers:emptyAns},
               questions : queResponse.data.questions
             }

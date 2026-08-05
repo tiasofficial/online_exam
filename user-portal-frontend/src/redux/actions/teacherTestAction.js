@@ -2,6 +2,7 @@ import axios from "axios"
 import apis from "../../helper/Apis"
 import { ActionTypes } from "../action-types";
 import Auth from "../../helper/Auth"
+import { setAlert } from "./alertAction";
 
 export const createTestAction = (details, cb) => {
   return async(dispatch)=> {
@@ -118,5 +119,46 @@ export const getTestQuestionsForTeacherAction = (details) => {
         }
       })
     }
+  }
+}
+
+
+export const editTestTimeAction = (details, cb) => {
+  return (dispatch) => {
+    axios.post(apis.BASE + apis.EDIT_TEST_TIME, details, {
+      headers:{
+        'Authorization':`Bearer ${Auth.retriveToken()}`
+      }
+    }).then(response => {
+      if(response.data.success) {
+        dispatch(setAlert({isAlert:true,type:'success',title:'Success',message:response.data.message}))
+        if(cb) cb();
+      } else {
+        dispatch(setAlert({isAlert:true,type:'error',title:'Error',message:response.data.message}))
+      }
+    }).catch(err => {
+      console.log(err);
+      dispatch(setAlert({isAlert:true,type:'error',title:'Error',message:'Error updating test time'}))
+    })
+  }
+}
+
+export const reassignStudentTestAction = (details, cb) => {
+  return (dispatch) => {
+    axios.post(apis.BASE + apis.REASSIGN_STUDENT_TEST, details, {
+      headers:{
+        'Authorization':`Bearer ${Auth.retriveToken()}`
+      }
+    }).then(response => {
+      if(response.data.success) {
+        dispatch(setAlert({isAlert:true,type:'success',title:'Success',message:response.data.message}))
+        if(cb) cb();
+      } else {
+        dispatch(setAlert({isAlert:true,type:'error',title:'Error',message:response.data.message}))
+      }
+    }).catch(err => {
+      console.log(err);
+      dispatch(setAlert({isAlert:true,type:'error',title:'Error',message:'Error reassigning test'}))
+    })
   }
 }
