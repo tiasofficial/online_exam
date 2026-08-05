@@ -118,13 +118,23 @@ class ViewTest extends React.Component {
   }
 
   handleEditTimeSave = () => {
+    if (this.state.editResultTime && new Date(this.state.editResultTime) <= new Date(this.state.editEndTime)) {
+      alert('Result Time must be after the Test End Time.');
+      return;
+    }
     const details = {
       testid: this.props.testDetails.test._id,
       startTime: this.state.editStartTime,
       endTime: this.state.editEndTime,
+      resultTime: this.state.editResultTime || null,
     };
     this.props.editTestTimeAction(details, () => {
-      this.setState({ openEditTime: false, startTime: this.state.editStartTime, endTime: this.state.editEndTime });
+      this.setState({ 
+        openEditTime: false, 
+        startTime: new Date(this.state.editStartTime).toLocaleString(), 
+        endTime: new Date(this.state.editEndTime).toLocaleString(),
+        resultTime: this.state.editResultTime ? new Date(this.state.editResultTime).toLocaleString() : this.state.resultTime
+      });
     });
   }
 
@@ -325,6 +335,11 @@ class ViewTest extends React.Component {
             <TextField label="Test End Time" type="datetime-local" fullWidth margin="dense" 
               value={this.state.editEndTime} onChange={(e) => this.setState({editEndTime: e.target.value})} 
               InputLabelProps={{ shrink: true }} />
+            <TextField label="Result Declaration Time" type="datetime-local" fullWidth margin="dense" 
+              value={this.state.editResultTime} onChange={(e) => this.setState({editResultTime: e.target.value})} 
+              InputLabelProps={{ shrink: true }}
+              helperText="Set when results become visible to students. Must be after End Time."
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => this.setState({openEditTime: false})}>Cancel</Button>
