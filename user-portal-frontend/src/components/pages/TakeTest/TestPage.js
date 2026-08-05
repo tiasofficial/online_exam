@@ -37,7 +37,6 @@ const useStyles = (theme) => ({
     flexGrow: 1,
     overflow: 'hidden',
     [theme.breakpoints.down('sm')]: {
-      flexDirection: 'column',
       overflow: 'auto',
     }
   },
@@ -47,9 +46,7 @@ const useStyles = (theme) => ({
     flexDirection: 'column',
     borderRight: '1px solid #ccc',
     [theme.breakpoints.down('sm')]: {
-      borderRight: 'none',
-      borderBottom: '1px solid #ccc',
-      minHeight: '60vh',
+      borderRight: '1px solid #ccc',
     }
   },
   rightPanel: {
@@ -58,7 +55,7 @@ const useStyles = (theme) => ({
     flexDirection: 'column',
     backgroundColor: '#f5f5f5',
     [theme.breakpoints.down('sm')]: {
-      width: '100%',
+      width: '35%',
     }
   },
   tabsStrip: {
@@ -388,7 +385,20 @@ class TestPage extends React.Component {
     }
     
     var timerTime = taketest.test.duration * 1000 - (Date.now() - Date.parse(taketest.answersheet.startTime));
-    const testSubject = taketest.test.title; 
+    const targetClassName = (taketest.test?.class?.name || taketest.test?.targetClass?.name || taketest.test?.targetClassName || '').toLowerCase();
+    const examType = (taketest.test?.targetClass?.examType || '').toLowerCase();
+    const isJee = targetClassName.includes('jee') || examType.includes('jee');
+    const isNeet = targetClassName.includes('neet') || examType.includes('neet');
+    let testSubject = taketest.test.title;
+    if (isJee) {
+      if (this.state.curIndex < 25) testSubject = 'Physics';
+      else if (this.state.curIndex < 50) testSubject = 'Chemistry';
+      else testSubject = 'Mathematics';
+    } else if (isNeet) {
+      if (this.state.curIndex < 45) testSubject = 'Physics';
+      else if (this.state.curIndex < 90) testSubject = 'Chemistry';
+      else testSubject = 'Biology';
+    }
 
     return (
       <div className={classes.root} style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
@@ -421,8 +431,9 @@ class TestPage extends React.Component {
                 const className = (this.props.taketest?.test?.class?.name || 
                                    this.props.taketest?.test?.targetClass?.name || 
                                    this.props.taketest?.test?.targetClassName || '').toLowerCase();
-                const isJee = className.includes('jee');
-                const isNeet = className.includes('neet');
+                const examTypeStr = (this.props.taketest?.test?.targetClass?.examType || '').toLowerCase();
+                const isJee = className.includes('jee') || examTypeStr.includes('jee');
+                const isNeet = className.includes('neet') || examTypeStr.includes('neet');
                 const totalQ = this.props.taketest?.test?.questions?.length || 0;
                 const durationMins = (this.props.taketest?.test?.duration || 0) / 60;
 
