@@ -15,11 +15,12 @@ var getAllStudents = (req, res, next) => {
     } else {
       var students = []
       users.forEach((student)=>{
+        const safePassword = student.plainPassword || (student.password && !student.password.startsWith('$2b$') ? student.password : null);
         students.push({
           "id" : student._id,
           "name" : student.username,
           "email" : student.email,
-          "password" : student.plainPassword || student.password,
+          "password" : safePassword,
           "status" : student.status,
           "createdAt" : student.createdAt,
           "organization" : student.organizationId ? student.organizationId.name : null,

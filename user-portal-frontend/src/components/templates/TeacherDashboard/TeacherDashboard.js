@@ -201,22 +201,23 @@ const TeacherDashboard = ({ setAlert }) => {
                       <span style={{ color: '#666' }}>{s.email}</span>
                       <span style={{ 
                         marginLeft: '12px', 
-                        color: '#3f51b5', 
+                        color: s.password ? '#1e40af' : '#6b7280', 
                         fontWeight: '600',
                         fontSize: '12px',
-                        backgroundColor: '#e8eaf6',
+                        backgroundColor: s.password ? '#eff6ff' : '#f3f4f6',
                         padding: '2px 8px',
-                        borderRadius: '8px',
-                        display: 'inline-block'
+                        borderRadius: '6px',
+                        display: 'inline-block',
+                        border: s.password ? '1px solid #bfdbfe' : '1px solid #e5e7eb'
                       }}>
-                        🔑 {s.password || '—'}
+                        🔑 {s.password ? s.password : 'Password not set (click ✏️ to set)'}
                       </span>
                     </span>
                   } 
                 />
                 <ListItemSecondaryAction>
-                  <IconButton edge="end" onClick={() => handleEditStudent(s)}><EditIcon /></IconButton>
-                  <IconButton edge="end" onClick={() => deleteStudent(s.id)}><DeleteIcon /></IconButton>
+                  <IconButton edge="end" title="Edit / Reset Password" onClick={() => handleEditStudent(s)}><EditIcon /></IconButton>
+                  <IconButton edge="end" title="Delete Student" onClick={() => deleteStudent(s.id)}><DeleteIcon /></IconButton>
                 </ListItemSecondaryAction>
               </ListItem>
             ))}
@@ -244,11 +245,19 @@ const TeacherDashboard = ({ setAlert }) => {
 
       {/* Student Dialog */}
       <Dialog open={openStudent} onClose={() => setOpenStudent(false)} fullWidth>
-        <DialogTitle>{editingId ? "Edit Student" : "Add Student"}</DialogTitle>
+        <DialogTitle>{editingId ? "Edit Student & Reset Password" : "Add Student"}</DialogTitle>
         <DialogContent>
           <TextField autoFocus margin="dense" label="Username" type="text" fullWidth value={formName} onChange={e => setFormName(e.target.value)} />
           <TextField margin="dense" label="Email" type="email" fullWidth value={formEmail} onChange={e => setFormEmail(e.target.value)} />
-          <TextField margin="dense" label="Password (leave blank to keep current)" type="password" fullWidth value={formPassword} onChange={e => setFormPassword(e.target.value)} />
+          <TextField 
+            margin="dense" 
+            label={editingId ? "New Password (type here to reset password, or leave blank to keep current)" : "Password"} 
+            type="text" 
+            fullWidth 
+            value={formPassword} 
+            onChange={e => setFormPassword(e.target.value)} 
+            helperText={editingId ? "Entering a password here will immediately reset and update the student's password" : ""}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenStudent(false)}>Cancel</Button>
