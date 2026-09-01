@@ -11,7 +11,6 @@ import CreateTestForm from "../../templates/CreateTestForm/CreateTestForm";
 import TestDetails from "../../templates/TestDetails/TestDetails";
 import ClassManagement from "../../templates/ClassManagement/ClassManagement";
 import TeacherDashboard from "../../templates/TeacherDashboard/TeacherDashboard";
-import QuestionBank from "../../templates/QuestionBank/QuestionBank";
 
 const drawerWidth = 200
 const appbarHeight = 64
@@ -55,9 +54,6 @@ class TeacherHomepage extends React.Component{
       },{
         title: 'Questions',
         content:<QuestionDetails/>
-      },{
-        title: 'Question Bank',
-        content: <QuestionBank/>
       },{
         title: 'Create Test',
         content: <CreateTestForm/>
