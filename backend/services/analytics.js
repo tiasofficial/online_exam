@@ -53,7 +53,25 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         let q = questions.find(x => x._id.toString() === (qId._id || qId).toString());
         
         let marks = q?.marks || 4;
-        let diff = q?.difficulty || 'MEDIUM';
+        let timeSpent = answersheet.timeSpent && answersheet.timeSpent[i] ? parseFloat(answersheet.timeSpent[i]) : 0;
+        let revisit = answersheet.revisitCounts && answersheet.revisitCounts[i] ? parseInt(answersheet.revisitCounts[i]) : 0;
+
+        // Dynamic difficulty based on time spent (or question position if time is unrecorded)
+        let diff = q?.difficulty;
+        if (!diff || diff === 'MEDIUM' || diff === 'undefined') {
+          if (timeSpent > 120) {
+            diff = 'HARD';
+          } else if (timeSpent > 0 && timeSpent <= 45) {
+            diff = 'EASY';
+          } else if (timeSpent > 45) {
+            diff = 'MEDIUM';
+          } else {
+            const pos = i % 25;
+            if (pos < 8) diff = 'EASY';
+            else if (pos < 18) diff = 'MEDIUM';
+            else diff = 'HARD';
+          }
+        }
 
         let subName = 'General';
         if (q && q.subject) {
@@ -93,9 +111,6 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         if (!subjects[subName].difficultyStats[diff]) {
           subjects[subName].difficultyStats[diff] = { correct: 0, attempted: 0 };
         }
-
-        let timeSpent = answersheet.timeSpent && answersheet.timeSpent[i] ? parseFloat(answersheet.timeSpent[i]) : 0;
-        let revisit = answersheet.revisitCounts && answersheet.revisitCounts[i] ? parseInt(answersheet.revisitCounts[i]) : 0;
         
         questionTimeAnalytics.push({
           name: `Q${i + 1}`,
@@ -178,17 +193,36 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
         const maxM = test.maxmarks || 200;
         const timeVal = totalTimeSpent || (answersheet.timeSpent ? answersheet.timeSpent.reduce((a, b) => a + (Number(b) || 0), 0) : 0);
 
+        const getDiffStats = (correct, totalQ = 25) => {
+          const easyA = Math.min(8, Math.round(totalQ * 0.32));
+          const hardA = Math.min(5, Math.round(totalQ * 0.20));
+          const medA = Math.max(0, totalQ - easyA - hardA);
+          
+          const easyC = Math.min(easyA, Math.round(correct * (easyA / (totalQ || 1))));
+          const hardC = Math.min(hardA, Math.round(correct * (hardA / (totalQ || 1))));
+          const medC = Math.max(0, correct - easyC - hardC);
+
+          return {
+            EASY: { correct: easyC, attempted: easyA },
+            MEDIUM: { correct: medC, attempted: medA },
+            HARD: { correct: hardC, attempted: hardA }
+          };
+        };
+
         if (isJee) {
           const pScore = Math.round(score / 2);
           const cScore = score - pScore;
+          const pCorrect = Math.max(0, Math.round(pScore / 4));
+          const cCorrect = Math.max(0, Math.round(cScore / 4));
+
           subjects['Physics'] = {
             subjectName: 'Physics',
             obtainedMarks: pScore,
             totalPossibleMarks: Math.round(maxM / 2),
-            correctCount: Math.max(0, Math.round(pScore / 4)),
+            correctCount: pCorrect,
             incorrectCount: 0,
-            unattemptedCount: Math.max(0, 25 - Math.round(pScore / 4)),
-            difficultyStats: { EASY: { correct: 0, attempted: 0 }, MEDIUM: { correct: Math.max(0, Math.round(pScore / 4)), attempted: 25 }, HARD: { correct: 0, attempted: 0 } },
+            unattemptedCount: Math.max(0, 25 - pCorrect),
+            difficultyStats: getDiffStats(pCorrect, 25),
             totalTime: timeVal / 2,
             totalRevisits: 25,
             questionCount: 25,
@@ -201,10 +235,10 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
             subjectName: 'Chemistry',
             obtainedMarks: cScore,
             totalPossibleMarks: maxM - Math.round(maxM / 2),
-            correctCount: Math.max(0, Math.round(cScore / 4)),
+            correctCount: cCorrect,
             incorrectCount: 0,
-            unattemptedCount: Math.max(0, 25 - Math.round(cScore / 4)),
-            difficultyStats: { EASY: { correct: 0, attempted: 0 }, MEDIUM: { correct: Math.max(0, Math.round(cScore / 4)), attempted: 25 }, HARD: { correct: 0, attempted: 0 } },
+            unattemptedCount: Math.max(0, 25 - cCorrect),
+            difficultyStats: getDiffStats(cCorrect, 25),
             totalTime: timeVal / 2,
             totalRevisits: 25,
             questionCount: 25,
@@ -214,14 +248,15 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
             avgRevisits: 2
           };
         } else {
+          const totalC = Math.max(0, Math.round(score / 4));
           subjects[test.title || 'Overall Performance'] = {
             subjectName: test.title || 'Overall Performance',
             obtainedMarks: score,
             totalPossibleMarks: maxM,
-            correctCount: Math.max(0, Math.round(score / 4)),
+            correctCount: totalC,
             incorrectCount: 0,
-            unattemptedCount: 5,
-            difficultyStats: { EASY: { correct: 0, attempted: 0 }, MEDIUM: { correct: Math.max(0, Math.round(score / 4)), attempted: 25 }, HARD: { correct: 0, attempted: 0 } },
+            unattemptedCount: Math.max(0, 25 - totalC),
+            difficultyStats: getDiffStats(totalC, 25),
             totalTime: timeVal,
             totalRevisits: 10,
             questionCount: 25,
