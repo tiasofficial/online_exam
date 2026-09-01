@@ -345,8 +345,7 @@ class TestResultStudent extends React.Component {
       {test.status === 'RESULT_DECLARED' && test.leaderboard && test.leaderboard.length > 0 && (
         <div className={this.props.classes.leaderboardSection}>
           <Typography className={this.props.classes.leaderboardTitle}>🏆 Top 3 Leaderboard</Typography>
-          
-          {/* Desktop leaderboard table */}
+                  {/* Desktop leaderboard table */}
           <div className={this.props.classes.leaderboardDesktop}>
             <TableContainer component={Paper} className={this.props.classes.leaderboardTable}>
               <Table size="small">
@@ -358,12 +357,12 @@ class TestResultStudent extends React.Component {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {test.leaderboard.map((student) => {
+                  {test.leaderboard.slice(0, 3).map((student) => {
                     const medals = ['🥇', '🥈', '🥉'];
                     const medal = medals[student.rank - 1] || `#${student.rank}`;
                     return (
                       <TableRow 
-                        key={student.rank + student.studentName}
+                        key={student.rank + student.studentName} 
                         style={{ backgroundColor: student.isCurrentUser ? '#e8eaf6' : student.rank === 1 ? '#fffde7' : student.rank === 2 ? '#f5f5f5' : student.rank === 3 ? '#fff8e1' : 'inherit' }}
                       >
                         <TableCell style={{ fontWeight: 'bold', fontSize: '18px' }}>{medal}</TableCell>
@@ -381,7 +380,7 @@ class TestResultStudent extends React.Component {
 
           {/* Mobile leaderboard cards */}
           <div className={this.props.classes.leaderboardCard}>
-            {test.leaderboard.map((student) => {
+            {test.leaderboard.slice(0, 3).map((student) => {
               const medals = ['🥇', '🥈', '🥉'];
               const medal = medals[student.rank - 1] || `#${student.rank}`;
               return (
