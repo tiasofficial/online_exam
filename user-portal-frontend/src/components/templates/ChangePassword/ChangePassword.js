@@ -203,10 +203,6 @@ class ChangePassword extends React.Component {
             {submitting ? <CircularProgress size={22} color="inherit" /> : 'Update Password'}
           </Button>
         </form>
-
-        <Typography className={classes.hint}>
-          Your teacher will be able to see your new password.
-        </Typography>
       </Paper>
     );
   }
