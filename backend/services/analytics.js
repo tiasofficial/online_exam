@@ -32,11 +32,13 @@ const getStudentDashboardAnalytics = async (req, res, next) => {
       const test = answersheet.test;
       if (!test || !test.questions) continue;
 
-      const questionBankModel = require("../models/questionBank");
       let questions = await questionModel.find({ _id: { $in: test.questions } }).populate('subject');
       if (!questions || questions.length < test.questions.length) {
-        const bankQuestions = await questionBankModel.find({ _id: { $in: test.questions } }).populate('subject');
-        questions = [...(questions || []), ...(bankQuestions || [])];
+        try {
+          const questionBankModel = require("../models/questionBank");
+          const bankQuestions = await questionBankModel.find({ _id: { $in: test.questions } }).populate('subject');
+          questions = [...(questions || []), ...(bankQuestions || [])];
+        } catch (e) {}
       }
       
       let totalPossibleMarks = 0;

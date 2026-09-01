@@ -67,11 +67,6 @@ router.post('/updateStudent', studentService.updateStudent);
 router.post('/deleteStudent', studentService.deleteStudent);
 router.post('/changePassword', studentService.changeOwnPassword);
 
-const questionBankService = require('../services/questionBank');
-router.post('/questionBank/search', questionBankService.searchQuestionBank);
-router.post('/questionBank/addToTest', questionBankService.addBankQuestionToTest);
-router.get('/questionBank/stats', questionBankService.getQuestionBankStats);
-
 // student user specific routes
 router.post('/testRegistration',testService.testRegistration);
 router.get('/getAllTestStudent',testService.getAllTestWithStudentRegisterCheck);
