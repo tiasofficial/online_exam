@@ -1,0 +1,90 @@
+var express = require('express');
+var router = express.Router();
+
+var loginService = require('../services/login');
+var questionService = require('../services/question');
+var subjectService = require('../services/subject');
+var testService = require('../services/test');
+var resultService = require('../services/result');
+var taketestService = require('../services/taketest');
+var analyticsService = require('../services/analytics');
+var upload = require('../middleware/upload');
+
+router.get('/details',loginService.userDetails);
+router.get('/getAllTest',testService.getAllTest);
+router.post('/getTestById',testService.getTestDetailsFromId);
+
+// teacher user specific routes 
+router.post('/addQuestion',questionService.addQuestion);
+router.post('/addExamQuestion', upload.fields([
+  { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
+  { name: 'optImg1', maxCount: 1 },
+  { name: 'optImg2', maxCount: 1 },
+  { name: 'optImg3', maxCount: 1 },
+  { name: 'optImg4', maxCount: 1 }
+]), testService.addExamQuestion);
+
+router.post('/editExamQuestion', upload.fields([
+  { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
+  { name: 'optImg1', maxCount: 1 },
+  { name: 'optImg2', maxCount: 1 },
+  { name: 'optImg3', maxCount: 1 },
+  { name: 'optImg4', maxCount: 1 }
+]), testService.editExamQuestion);
+router.post('/deleteExamQuestion', testService.deleteExamQuestion);
+router.get('/getAllSubjects',subjectService.getAllActiveSubject);
+router.post('/createSubject',subjectService.createSubject);
+router.post('/updateSubject',subjectService.updateSubject);
+router.post('/deleteSubject',subjectService.deleteSubject);
+router.post('/searchQuestion',questionService.searchQuestion);
+router.post('/updateQuestion', upload.fields([
+  { name: 'bodyImage', maxCount: 1 },
+  { name: 'explanationImage', maxCount: 1 },
+  { name: 'optImg1', maxCount: 1 },
+  { name: 'optImg2', maxCount: 1 },
+  { name: 'optImg3', maxCount: 1 },
+  { name: 'optImg4', maxCount: 1 }
+]), questionService.updateQuestion);
+router.post('/getQuestion',questionService.getQuestionById);
+router.post('/changeQuestionStatus',questionService.changeQuestionStatus);
+router.post('/getAnswer',questionService.getAnsByQuestionId);
+router.post('/getQuestionAnswer',questionService.getQuestionAnswerById);
+router.post('/createTest',testService.createTest);
+router.post('/deleteTest',testService.deleteTest);
+router.post('/assignStudentsToTest',testService.assignStudentsToTest);
+router.post('/getAssignedStudents',testService.getAssignedStudents);
+router.post('/editTestTime',testService.editTestTime);
+router.post('/reassignStudentTest',testService.reassignStudentTest);
+router.post('/getTestQuestionsForTeacher',testService.getTestQuestionsForTeacher);
+router.post('/getTestResultsForTeacher',resultService.getTestResultsForTeacher);
+router.post('/getStudentResultDetailsForTeacher',resultService.getStudentResultDetailsForTeacher);
+const studentService = require('../services/student');
+router.get('/getAllStudentsForTeacher', studentService.getAllStudents);
+router.post('/createStudent', studentService.createStudent);
+router.post('/updateStudent', studentService.updateStudent);
+router.post('/deleteStudent', studentService.deleteStudent);
+router.post('/changePassword', studentService.changeOwnPassword);
+
+const questionBankService = require('../services/questionBank');
+router.post('/questionBank/search', questionBankService.searchQuestionBank);
+router.post('/questionBank/addToTest', questionBankService.addBankQuestionToTest);
+router.get('/questionBank/stats', questionBankService.getQuestionBankStats);
+
+// student user specific routes
+router.post('/testRegistration',testService.testRegistration);
+router.get('/getAllTestStudent',testService.getAllTestWithStudentRegisterCheck);
+router.get('/getUpcomingTests',testService.getUpcomingTestforStudent);
+
+
+router.post('/startTest',taketestService.startTestForStudent);
+router.post('/getQuenStarttime',taketestService.getQuestionsAndSetStartTime);
+router.post('/saveAnswer',taketestService.saveAnswer);
+router.post('/endTest',taketestService.saveAnswerandEndTest);
+
+router.get('/getAllCompletedTest',resultService.getAllCompletedTest);
+router.post('/getResultMainDetailsByTestId',resultService.getResultMainDetailsByTestId);
+router.get('/getStudentDashboardAnalytics', analyticsService.getStudentDashboardAnalytics);
+router.post('/getQuestionAnswerByIds',questionService.getQuestionAnswerByIds)
+module.exports = router;

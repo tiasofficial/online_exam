@@ -1,0 +1,565 @@
+var answersheetModel = require('../models/answersheet');
+const questionModel = require('../models/question');
+var testModel = require('../models/test');
+const testRegistrationModel = require('../models/testRegistration');
+const classModel = require('../models/class');
+
+var getTestStatus = (test) => {
+  if(test.status === 'CANCELLED')
+    return test.status;
+  var status = 'CREATED'
+  var now = new Date();
+  if(Date.parse(test.resultTime) < now) {
+    status = 'RESULT_DECLARED';
+  } else if(Date.parse(test.endTime) < now) {
+    status = 'TEST_COMPLETE';
+  } else if(Date.parse(test.startTime) < now) {
+    status = 'TEST_STARTED';
+  } else if(Date.parse(test.regEndTime) < now) {
+    status = 'REGISTRATION_COMPLETE'
+  } else if(Date.parse(test.regStartTime) < now) {
+    status = 'REGISTRATION_STARTED';
+  }
+  return status;
+}
+
+var getAttemptEndTime = (test, startAttemptTime, reassignEndTime) => {
+  var regularEndTime = new Date(Date.parse(startAttemptTime) + (test.duration*1000));
+  var endTime = new Date(Date.parse(reassignEndTime || test.endTime));
+  return regularEndTime < endTime ? regularEndTime : endTime; 
+}
+
+var sortByIds = (questions, questionids) => {
+  var result = [];
+  for(var i in questionids) {
+    for(var j in questions) {
+      if(questionids[i].toString() === questions[j]._id.toString()) {
+        result.push(questions[j]);
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+var getIndex = (questionDetail,questionids) => {
+  for(var j in questionids) {
+    if(questionDetail._id.toString() === questionids[j].toString()) 
+      return j;
+  }
+  return -1;
+}
+
+var calculateMarks = async(questionids, answers, ansid) => {
+  var marks = 0;
+  var questionDetails = await questionModel.find({_id:{$in:questionids}})
+  .catch(err => {
+    console.log(err);
+  })
+  if(questionDetails.length !== questionids.length) {
+    console.log("not all questions found");
+    return;
+  }
+  for(var i in questionDetails) {
+    var index = getIndex(questionDetails[i],questionids);
+    if(index!=-1 && answers[index]!=null) {
+      let qType = questionDetails[i].questionType || 'SINGLE';
+      let qMarks = questionDetails[i].marks;
+      
+      let isAttempted = false;
+      let userAns = [];
+      
+      if (answers[index] != null) {
+        if (qType === 'MULTIPLE') {
+          let rawAns = Array.isArray(answers[index]) ? answers[index] : (typeof answers[index] === 'string' && answers[index] !== '' ? answers[index].split(',') : [answers[index]]);
+          userAns = rawAns.map(a => a != null ? a.toString().trim() : '').filter(a => a !== '');
+          isAttempted = userAns.length > 0;
+        } else if (qType === 'NUMERICAL') {
+          isAttempted = answers[index].toString().trim() !== '';
+        } else {
+          // SINGLE_CHOICE
+          isAttempted = answers[index].toString().trim() !== '';
+        }
+      }
+
+      if (isAttempted) {
+        if (qType === 'NUMERICAL') {
+          let userAnsNum = parseFloat(answers[index]);
+          let actualAnsNum = parseFloat(questionDetails[i].answer);
+          if (!isNaN(userAnsNum) && !isNaN(actualAnsNum)) {
+            if (userAnsNum.toFixed(2) === actualAnsNum.toFixed(2)) {
+              marks += qMarks;
+            } else {
+              marks -= 1;
+            }
+          }
+        } else if (qType === 'MULTIPLE') {
+          let actualAns = Array.isArray(questionDetails[i].answer) ? questionDetails[i].answer : (typeof questionDetails[i].answer === 'string' && questionDetails[i].answer !== '' ? questionDetails[i].answer.split(',') : [questionDetails[i].answer]);
+          actualAns = actualAns.map(a => a != null ? a.toString().trim() : '');
+          
+          let correctCount = 0;
+          let incorrectCount = 0;
+          userAns.forEach(a => {
+            if (actualAns.includes(a)) correctCount++;
+            else incorrectCount++;
+          });
+          
+          if (incorrectCount === 0 && correctCount > 0) {
+            // Partial marking
+            marks += (correctCount / actualAns.length) * qMarks;
+          } else if (incorrectCount > 0) {
+            marks -= 1; // Negative mark for wrong selection
+          }
+        } else {
+          // SINGLE_CHOICE
+          if(questionDetails[i].answer.toString().trim() === answers[index].toString().trim()) {
+            marks += qMarks;
+          } else {
+            marks -= 1;
+          }
+        }
+      }
+    }
+  }
+
+  answersheetModel.findOneAndUpdate({_id:ansid, completed:true},{score:marks})
+  .then(result=>{
+    console.log("score is added in answersheet "+ansid);
+  })
+  .catch(err=> {
+    console.log(err);
+  })
+  
+}
+
+var startTestForStudent = async(req,res,next)=> {
+  var creator = req.user || null;
+  if(creator == null || req.user.usertype != 'STUDENT') {
+    res.status(401).json({
+      success : false,
+      message : "Permissions not granted!"
+    })
+  } 
+
+  req.check('testid','empty test id').notEmpty();
+  
+
+  var errors = req.validationErrors()
+  if(errors) {
+    console.log(errors);
+    res.json({
+      success : false,
+      message : 'Invalid inputs',
+      errors : errors
+    })
+    return;
+  }
+
+  testModel.findById({_id:req.body.testid}).populate('targetClass')
+  .then(async test => {
+    if(test) {
+      
+        var correctStatus = getTestStatus(test);
+        if(correctStatus !== test.status) {
+          updateStatus(test,correctStatus);
+          test.status = correctStatus;
+        }
+
+        // Check if student has reassigned time
+        let hasReassignedTime = false;
+        let reassignEndTime = null;
+        try {
+           const reg = await testRegistrationModel.findOne({ user: creator._id, test: test._id });
+           if (reg && reg.reassignEndTime && Date.parse(reg.reassignEndTime) > Date.now()) {
+               hasReassignedTime = true;
+               reassignEndTime = reg.reassignEndTime;
+           }
+        } catch (err) {
+           console.log(err);
+        }
+
+        if(test.status === 'TEST_STARTED' || hasReassignedTime) {
+
+        const classModel = require('../models/class');
+        if (test.targetClass) {
+          classModel.findById(test.targetClass._id || test.targetClass).then(classObj => {
+            if (!classObj || !classObj.students.includes(creator._id)) {
+              return res.json({ success: false, message: "You are not enrolled in the class for this test" });
+            }
+            proceedToTest();
+          });
+        } else {
+          proceedToTest();
+        }
+
+        function proceedToTest() {
+        testRegistrationModel.find({user:creator._id,test:req.body.testid})
+        .then(testRegFind =>{
+          if(testRegFind.length > 0 || !test.regStartTime) {
+            answersheetModel.find({student:creator._id,test:req.body.testid})
+            .then(answersheets => {
+              if(answersheets.length > 0) {
+              if(Date.now() > getAttemptEndTime(test,answersheets[0].startTime, reassignEndTime)) {
+                  answersheets[0].completed = true;
+                  answersheetModel.findByIdAndUpdate(answersheets[0]._id, {completed: true})
+                  .then(()=>{
+                    console.log("answer sheet marked compeleted for test "+test._id+" user "+creator._id);
+                    calculateMarks(test.questions,answersheets[0].answers, answersheets[0]._id);
+                  })
+                  .catch((err)=>{
+                    console.log(err);
+                    console.log("could not mark answersheet completed");
+                  })
+                }
+                if(answersheets[0].completed) {
+                  res.json({
+                    success : false,
+                    message : 'you have taken this test'
+                  })
+                } else {
+                  res.json({
+                    success : true,
+                    message : 'test is already started',
+                    answersheet : answersheets[0],
+                    questions : test.questions,
+                    test: test
+                  })
+                }
+              } else {
+                var tempdata = new answersheetModel({
+                  test : req.body.testid,
+                  student : creator._id
+                })
+                tempdata.save((err,newdata)=>{
+                  if (err){
+                    console.log(err);
+                    res.status(500).json({
+                      success : false,
+                      message : "Unable to start test"
+                    })
+                  } else {
+                    res.json({
+                      success : true,
+                      message : 'Test started',
+                      answersheet : newdata,
+                      questions : test.questions,
+                      test: test
+                    })
+                  }
+                })
+              }
+            })
+            
+          } else {
+            res.json({
+              success : false,
+              message : "You are not registered"
+            })
+          }
+        })
+        .catch(err=>{
+          console.log(err);
+          res.json({
+            success : false,
+            message : "Unable to start test"
+          })
+        })
+        }
+      } else if(test.status === 'TEST_COMPLETE') {
+        res.json({
+          success : false,
+          message : "Test time is over"
+        })
+      } else {
+        res.json({
+          success : false,
+          message : "Test is not started"
+        })
+      }
+    } else {
+      res.json({
+        success : false,
+        message : "Unable to find test"
+      })
+    }
+  }).catch(err => {
+    console.log(err);
+    res.json({
+      success : false,
+      message : "Unable to start test"
+    })
+  })
+}
+
+var getQuestionsAndSetStartTime = async(req,res,next)=> {
+  var creator = req.user || null;
+  if(creator == null || req.user.usertype != 'STUDENT') {
+    res.status(401).json({
+      success : false,
+      message : "Permissions not granted!"
+    })
+  } 
+
+  req.check('addStartTime','boolean to add start time not found').isBoolean();
+  req.check('answersheetid','answersheet id not found').notEmpty();
+  req.check('questionid','Invalid length of list of question').isArray({min:1});
+  req.check('questionid.*','Invalid question id').notEmpty();
+  
+  var errors = req.validationErrors()
+  if(errors) {
+    console.log(errors);
+    res.json({
+      success:false,
+      message: 'Invalid inputs',
+      errors : errors
+    })
+    return;
+  }
+
+  var ques = await questionModel.find({_id:{$in:req.body.questionid}});
+  var questions = sortByIds(ques,req.body.questionid);
+
+  var startTime = "";
+  if(req.body.addStartTime) {
+    startTime = new Date();
+    var answersheet = await answersheetModel.findByIdAndUpdate(req.body.answersheetid,{startTime:startTime })
+    .catch((err=> {
+      res.json({
+        success : false,
+        message : "Internal server error"
+      })
+      return;
+    }))
+  } else {
+    var answersheet = await answersheetModel.findById({_id:req.body.answersheetid})
+    .catch((err=> {
+      res.json({
+        success : false,
+        message : "Internal server error"
+      })
+      return;
+    }))
+    if(answersheet) {
+      startTime = answersheet.startTime;
+    }
+  }
+  console.log(startTime);
+  if(startTime>0) {
+    res.json({
+      success : true,
+      startTime : startTime,
+      questions : questions.map(x=>({ 
+        _id:x._id,
+        body:x.body,
+        bodyImage: x.bodyImage,
+        options:x.options,
+        optionImages: x.optionImages,
+        questionType: x.questionType,
+        marks : x.marks,
+        subject: x.subject
+      }))
+    })
+  } else {
+    res.json({
+      success : false,
+      message : "answersheet not found"
+    })
+  }
+
+}
+
+const sanitizeTrackingNumArray = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(v => (typeof v === 'number' && !isNaN(v)) ? Math.max(0, Math.round(v)) : 0);
+};
+
+var saveAnswer = async(req,res,next) => {
+  var creator = req.user || null;
+  if(creator == null || req.user.usertype != 'STUDENT') {
+    res.status(401).json({
+      success : false,
+      message : "Permissions not granted!"
+    })
+  }
+
+  req.check('answersheetid','answersheet id not found').notEmpty();
+  req.check('answers','Invalid length of list of answers').isArray({min:1});
+
+  var errors = req.validationErrors()
+  if(errors) {
+    console.log(errors);
+    res.json({
+      success:false,
+      message: 'Invalid inputs',
+      errors : errors
+    })
+    return;
+  }
+
+  var answersheet = await answersheetModel.findById({_id:req.body.answersheetid})
+  .catch((err=> {
+    res.json({
+      success : false,
+      message : "Internal server error"
+    })
+    return;
+  }))
+  if(answersheet) {
+    if(answersheet.completed) {
+      res.json({
+        success : true,
+        testDone : true,
+        message : "Test is completed"
+      })
+      return;
+    }
+    var test = await testModel.findById({_id:answersheet.test})
+    .catch((err)=>{
+      console.log(err);
+      console.log("could not mark answersheet completed");
+    })
+
+    // Look up reassignEndTime for this student
+    let reassignEndTime = null;
+    try {
+      const reg = await testRegistrationModel.findOne({ user: creator._id, test: answersheet.test });
+      if (reg && reg.reassignEndTime && Date.parse(reg.reassignEndTime) > Date.now()) {
+        reassignEndTime = reg.reassignEndTime;
+      }
+    } catch(e) { console.log(e); }
+    
+    if(Date.now() - getAttemptEndTime(test, answersheet.startTime, reassignEndTime) > 0) {
+      let updateData = { answers: req.body.answers, completed : true };
+      if (req.body.timeSpent) updateData.timeSpent = sanitizeTrackingNumArray(req.body.timeSpent);
+      if (req.body.revisitCounts) updateData.revisitCounts = sanitizeTrackingNumArray(req.body.revisitCounts);
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
+      .then(()=>{
+        res.json({
+          success : true,
+          testDone : true,
+          message : "answers updated"
+        })
+        calculateMarks(test.questions, req.body.answers, req.body.answersheetid);
+      }).catch((err)=>{
+        console.log(err);
+        console.log("could not update answers and complete test");
+      })
+    }
+    else {
+      let updateData = { answers: req.body.answers };
+      if (req.body.timeSpent) updateData.timeSpent = sanitizeTrackingNumArray(req.body.timeSpent);
+      if (req.body.revisitCounts) updateData.revisitCounts = sanitizeTrackingNumArray(req.body.revisitCounts);
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
+      .then(()=>{
+        res.json({
+          success : true,
+          testDone : false,
+          message : "answers updated"
+        })
+      }).catch((err)=>{
+        console.log(err);
+        console.log("could not update answers");
+      })
+    }
+  } else {
+    res.json({
+      success : false,
+      message : "Answersheet not found"
+    })
+  }
+}
+
+const saveAnswerandEndTest = async(req,res,next)=> {
+  var creator = req.user || null;
+  if(creator == null || req.user.usertype != 'STUDENT') {
+    res.status(401).json({
+      success : false,
+      message : "Permissions not granted!"
+    })
+  }
+
+  req.check('answersheetid','answersheet id not found').notEmpty();
+  req.check('answers','Invalid length of list of answers').isArray({min:1});
+
+  var answersheet = await answersheetModel.findById({_id:req.body.answersheetid})
+  .catch((err=> {
+    res.json({
+      success : false,
+      message : "Internal server error"
+    })
+    return;
+  }))
+
+  if(answersheet) {
+    if(answersheet.completed) {
+      res.json({
+        success : true,
+        message : "Test is completed"
+      })
+      return;
+    }
+    var test = await testModel.findById({_id:answersheet.test})
+    .catch((err)=>{
+      console.log(err);
+      console.log("could not mark answersheet completed");
+    })
+
+    // Look up reassignEndTime for this student
+    let reassignEndTime = null;
+    try {
+      const reg = await testRegistrationModel.findOne({ user: creator._id, test: answersheet.test });
+      if (reg && reg.reassignEndTime && Date.parse(reg.reassignEndTime) > Date.now()) {
+        reassignEndTime = reg.reassignEndTime;
+      }
+    } catch(e) { console.log(e); }
+    
+    if(Date.now() - getAttemptEndTime(test, answersheet.startTime, reassignEndTime) > 10*1000) {
+      let updateData = { answers: req.body.answers, completed: true };
+      if (req.body.timeSpent) updateData.timeSpent = sanitizeTrackingNumArray(req.body.timeSpent);
+      if (req.body.revisitCounts) updateData.revisitCounts = sanitizeTrackingNumArray(req.body.revisitCounts);
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
+      .then(()=>{
+        console.log("answer sheet marked compeleted for test "+test._id+" user "+creator._id);
+        res.json({
+          success : true,
+          message : "Test is completed"
+        })
+        calculateMarks(test.questions,  req.body.answers, answersheet._id);
+      })
+      .catch((err)=>{
+        console.log(err);
+        console.log("could not mark answersheet completed");
+      })
+    } else {
+      let updateData = { answers: req.body.answers, completed: true };
+      if (req.body.timeSpent) updateData.timeSpent = sanitizeTrackingNumArray(req.body.timeSpent);
+      if (req.body.revisitCounts) updateData.revisitCounts = sanitizeTrackingNumArray(req.body.revisitCounts);
+      answersheetModel.findByIdAndUpdate(req.body.answersheetid, updateData)
+      .then(()=>{
+        res.json({
+          success : true,
+          message : "Test is completed"
+        })
+        calculateMarks(test.questions,  req.body.answers, answersheet._id);
+      }).catch((err)=>{
+        console.log(err);
+        console.log("could not update answers and complete test");
+      })
+    }
+    
+  } else {
+    res.json({
+      success : false,
+      message : "Answersheet not found"
+    })
+  }
+}
+
+
+
+module.exports = {
+  startTestForStudent,
+  getQuestionsAndSetStartTime,
+  saveAnswer,
+  saveAnswerandEndTest
+}
