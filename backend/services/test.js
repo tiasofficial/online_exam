@@ -681,23 +681,100 @@ var getAssignedStudents = async (req, res, next) => {
   }
   try {
     const testid = req.body.testid;
-    const registrations = await testRegistrationModel.find({ test: testid }).populate('user');
+    const test = await testModel.findById(testid);
+    if (!test) {
+      return res.status(404).json({ success: false, message: "Test not found" });
+    }
+
     const answersheetModel = require('../models/answersheet');
+    const userModel = require('../models/user');
     
-    const studentsData = await Promise.all(registrations.map(async (reg) => {
-      if (!reg.user) return null; // Safety check
-      const answersheet = await answersheetModel.findOne({ test: testid, student: reg.user._id });
+    // 1. Get explicit test registrations
+    const registrations = await testRegistrationModel.find({ test: testid }).populate('user');
+    
+    // 2. Get any answersheets (students who started or completed)
+    const answersheets = await answersheetModel.find({ test: testid }).populate('student');
+
+    // 3. Get students from target class if assigned
+    let classStudents = [];
+    if (test.targetClass) {
+      classStudents = await userModel.find({ targetClass: test.targetClass, usertype: 'STUDENT' });
+    }
+
+    // 4. Get organization students if registrations and class are empty
+    let orgStudents = [];
+    if (registrations.length === 0 && answersheets.length === 0 && classStudents.length === 0) {
+      const orgQuery = { usertype: 'STUDENT' };
+      if (req.user.organizationId) {
+        orgQuery.organizationId = req.user.organizationId;
+      }
+      orgStudents = await userModel.find(orgQuery);
+    }
+
+    // Combine all unique students
+    const studentMap = new Map();
+
+    // Add registrations
+    registrations.forEach(reg => {
+      if (reg.user && reg.user._id) {
+        studentMap.set(reg.user._id.toString(), {
+          user: reg.user,
+          reassignEndTime: reg.reassignEndTime || null
+        });
+      }
+    });
+
+    // Add answersheets
+    answersheets.forEach(sheet => {
+      if (sheet.student && sheet.student._id) {
+        const id = sheet.student._id.toString();
+        if (!studentMap.has(id)) {
+          studentMap.set(id, {
+            user: sheet.student,
+            reassignEndTime: null
+          });
+        }
+      }
+    });
+
+    // Add class students
+    classStudents.forEach(st => {
+      const id = st._id.toString();
+      if (!studentMap.has(id)) {
+        studentMap.set(id, {
+          user: st,
+          reassignEndTime: null
+        });
+      }
+    });
+
+    // Add org students
+    orgStudents.forEach(st => {
+      const id = st._id.toString();
+      if (!studentMap.has(id)) {
+        studentMap.set(id, {
+          user: st,
+          reassignEndTime: null
+        });
+      }
+    });
+
+    const studentsData = await Promise.all(Array.from(studentMap.values()).map(async (item) => {
+      const u = item.user;
+      const sheet = answersheets.find(a => a.student && a.student._id && a.student._id.toString() === u._id.toString()) 
+                 || await answersheetModel.findOne({ test: testid, student: u._id });
       return {
-        id: reg.user._id,
-        name: reg.user.name,
-        email: reg.user.email,
-        completed: answersheet ? answersheet.completed : false,
-        started: answersheet ? !!answersheet.startTime : false,
-        score: answersheet ? answersheet.score : 0,
-        reassignEndTime: reg.reassignEndTime || null
+        id: u._id,
+        name: u.username || u.name || "Student",
+        email: u.email,
+        completed: sheet ? sheet.completed : false,
+        started: sheet ? !!sheet.startTime : false,
+        score: sheet ? (sheet.score !== undefined ? sheet.score : 0) : 0,
+        reassignEndTime: item.reassignEndTime || null
       };
     }));
-    const studentIds = registrations.map(reg => reg.user ? reg.user._id : null).filter(Boolean);
+
+    const studentIds = Array.from(studentMap.keys());
     res.json({ success: true, studentsData: studentsData.filter(Boolean), studentIds: studentIds });
   } catch(err) {
     console.log(err);
@@ -1156,9 +1233,10 @@ var reassignStudentTest = async (req, res, next) => {
     
     // Update registration with extended time if provided
     if (newEndTime) {
-      await testRegistrationModel.updateOne(
+      await testRegistrationModel.findOneAndUpdate(
         { test: testid, user: studentid },
-        { $set: { reassignEndTime: new Date(newEndTime) } }
+        { $set: { reassignEndTime: new Date(newEndTime) } },
+        { upsert: true, new: true }
       );
     }
     

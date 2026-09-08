@@ -98,23 +98,52 @@ class ViewTest extends React.Component {
       openReassign: false,
       reassignStudentId: null,
       reassignStudentName: '',
-      reassignEndTime: ''
+      reassignEndTime: '',
+      loadingAssigned: false
     }
   }
 
-  
   componentDidMount() {
     this.fetchAssignedStudents();
   }
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.testDetails?.test?._id !== this.props.testDetails?.test?._id) {
+      const test = this.props.testDetails.test;
+      this.setState({
+        title: test.title,
+        subjects: test.subjects,
+        maxmarks: test.maxmarks,
+        queTypes: test.queTypes,
+        startTime: new Date(test.startTime).toLocaleString(),
+        endTime: new Date(test.endTime).toLocaleString(),
+        regStartTime: test.regStartTime ? new Date(test.regStartTime).toLocaleString() : "N/A",
+        regEndTime: test.regEndTime ? new Date(test.regEndTime).toLocaleString() : "N/A",
+        resultTime: test.resultTime ? new Date(test.resultTime).toLocaleString() : "N/A",
+        duration: Math.round(test.duration / 60),
+        showPreview: false,
+        assignedStudents: []
+      }, () => {
+        this.fetchAssignedStudents();
+      });
+    }
+  }
+
   fetchAssignedStudents = () => {
+    if (!this.props.testDetails?.test?._id) return;
+    this.setState({ loadingAssigned: true });
     axios.post(apis.BASE + apis.GET_ASSIGNED_STUDENTS, { testid: this.props.testDetails.test._id }, {
       headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
     }).then(res => {
       if(res.data.success) {
-        this.setState({ assignedStudents: res.data.studentsData });
+        this.setState({ assignedStudents: res.data.studentsData || [], loadingAssigned: false });
+      } else {
+        this.setState({ loadingAssigned: false });
       }
-    }).catch(err => console.log(err));
+    }).catch(err => {
+      console.log(err);
+      this.setState({ loadingAssigned: false });
+    });
   }
 
   handleEditTimeSave = () => {
@@ -324,7 +353,12 @@ class ViewTest extends React.Component {
       
         {/* ASSIGNED STUDENTS SECTION */}
         <div style={{ marginTop: '40px', textAlign: 'left', padding: '0 20px' }}>
-          <Typography variant="h5" gutterBottom>Assigned Students</Typography>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <Typography variant="h5">Assigned Students</Typography>
+            <Button size="small" variant="outlined" color="primary" onClick={this.fetchAssignedStudents} disabled={this.state.loadingAssigned}>
+              {this.state.loadingAssigned ? "Loading..." : "🔄 Refresh List"}
+            </Button>
+          </div>
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
