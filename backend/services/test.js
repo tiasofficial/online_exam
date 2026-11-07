@@ -1,3 +1,4 @@
+var mongoose = require('mongoose');
 var testModel = require('../models/test');
 var questionModel = require('../models/question');
 const testRegistrationModel = require('../models/testRegistration');
@@ -837,45 +838,99 @@ var addExamQuestion = async (req, res, next) => {
     }
     
     let finalSubject = targetSubject;
+    if (finalSubject && typeof finalSubject === 'string' && !mongoose.Types.ObjectId.isValid(finalSubject)) {
+      // If targetSubject was sent as a subject name string instead of an ObjectId
+      req.body.subjectName = finalSubject;
+      finalSubject = null;
+    }
+
     const classExamType = test.targetClass ? (test.targetClass.examType || null) : null;
-    if (!finalSubject && classExamType) {
-      if (classExamType === 'JEE-Mains') {
-         let qLen = test.questions.length;
-         let subjName = 'Physics';
-         if (qLen >= 25 && qLen < 50) subjName = 'Chemistry';
-         if (qLen >= 50) subjName = 'Mathematics';
-         
-         // Try to find in class subjects first
-         let subj = test.targetClass.subjects && test.targetClass.subjects.find(s => (s.subject && s.subject.toLowerCase() === subjName.toLowerCase()) || (s.name && s.name.toLowerCase() === subjName.toLowerCase()));
-         
-         if (subj) {
-             finalSubject = subj._id;
-         } else {
-             // Fallback to database
-             let dbSubj = await subjectModel.findOne({ name: { $regex: new RegExp('^' + subjName + '$', 'i') } });
-             if (dbSubj) {
-                 finalSubject = dbSubj._id;
-             } else if (test.targetClass.subjects && test.targetClass.subjects.length > 0) {
-                 finalSubject = test.targetClass.subjects[0]._id;
-             }
-         }
-      } else if (classExamType === 'NEET') {
-         // NEET - auto-assign subject based on question index
-         let qLen = test.questions.length;
-         let subjName = 'Physics';
-         if (qLen >= 45 && qLen < 90) subjName = 'Chemistry';
-         if (qLen >= 90) subjName = 'Biology';
-         
-         let subj = test.targetClass.subjects && test.targetClass.subjects.find(s => (s.name && s.name.toLowerCase() === subjName.toLowerCase()));
-         if (subj) {
-             finalSubject = subj._id;
-         } else {
-             let dbSubj = await subjectModel.findOne({ name: { $regex: new RegExp('^' + subjName + '$', 'i') } });
-             if (dbSubj) finalSubject = dbSubj._id;
-             else if (test.targetClass.subjects && test.targetClass.subjects.length > 0) {
-                 finalSubject = test.targetClass.subjects[0]._id;
-             }
-         }
+    if (!finalSubject) {
+      let subjName = req.body.subjectName ? req.body.subjectName.trim() : null;
+      let qIndex = req.body.questionIndex !== undefined && req.body.questionIndex !== ''
+        ? parseInt(req.body.questionIndex)
+        : test.questions.length;
+
+      if (!subjName && classExamType === 'JEE-Mains') {
+        subjName = 'Physics';
+        if (qIndex >= 25 && qIndex < 50) subjName = 'Chemistry';
+        if (qIndex >= 50) subjName = 'Mathematics';
+      } else if (!subjName && classExamType === 'NEET') {
+        subjName = 'Physics';
+        if (qIndex >= 45 && qIndex < 90) subjName = 'Chemistry';
+        if (qIndex >= 90) subjName = 'Biology';
+      }
+
+      if (subjName) {
+        const mathAliases = ['Mathematics', 'Maths', 'Math'];
+        const bioAliases = ['Biology', 'Bio'];
+        const isMath = mathAliases.some(a => a.toLowerCase() === subjName.toLowerCase());
+        const isBio = bioAliases.some(a => a.toLowerCase() === subjName.toLowerCase());
+
+        let targetAliases = [subjName];
+        if (isMath) targetAliases = mathAliases;
+        else if (isBio) targetAliases = bioAliases;
+
+        // 1. Try to find in class subjects first
+        let subj = test.targetClass && test.targetClass.subjects && test.targetClass.subjects.find(s => {
+          const sName = ((s && (s.name || s.subject)) || '').trim().toLowerCase();
+          return targetAliases.some(a => a.toLowerCase() === sName);
+        });
+
+        if (subj) {
+          finalSubject = subj._id;
+        } else {
+          // 2. Try to find in database (case-insensitive & whitespace tolerant)
+          const regexPattern = '^\\s*(' + targetAliases.join('|') + ')\\s*$';
+          const orgId = req.user.organizationId || test.organizationId || null;
+          let dbSubj = await subjectModel.findOne({
+            name: { $regex: new RegExp(regexPattern, 'i') },
+            ...(orgId ? { organizationId: orgId } : {})
+          });
+
+          if (!dbSubj) {
+            // Also search database without organization filter
+            dbSubj = await subjectModel.findOne({
+              name: { $regex: new RegExp(regexPattern, 'i') }
+            });
+          }
+
+          if (!dbSubj) {
+            // 3. Auto-create subject in database so question upload never breaks
+            try {
+              dbSubj = await subjectModel.create({
+                name: subjName,
+                status: true,
+                createdBy: req.user._id,
+                organizationId: orgId || undefined
+              });
+            } catch (createErr) {
+              dbSubj = await subjectModel.findOne({
+                name: { $regex: new RegExp(regexPattern, 'i') }
+              });
+            }
+          }
+
+          if (dbSubj) {
+            finalSubject = dbSubj._id;
+            // Link newly found/created subject to the class
+            if (test.targetClass && test.targetClass._id) {
+              await classModel.findByIdAndUpdate(test.targetClass._id, { $addToSet: { subjects: dbSubj._id } });
+            }
+          } else if (test.targetClass && test.targetClass.subjects && test.targetClass.subjects.length > 0) {
+            finalSubject = test.targetClass.subjects[0]._id;
+          }
+        }
+      }
+    }
+
+    if (!finalSubject) {
+      // Fallback: check if test itself has subjects or any active subject in DB
+      if (test.subjects && test.subjects.length > 0) {
+        finalSubject = test.subjects[0];
+      } else {
+        const anySubj = await subjectModel.findOne({ status: true });
+        if (anySubj) finalSubject = anySubj._id;
       }
     }
 

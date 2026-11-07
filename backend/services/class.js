@@ -61,6 +61,46 @@ var getAllClasses = async (req, res, next) => {
       classes = await classModel.find({ organizationId: orgId }).populate('students', 'username email _id').populate('subjects', 'name _id');
     }
 
+    // Ensure default subjects for fixed exam types (JEE-Mains & NEET)
+    let subjectsUpdated = false;
+    for (const cls of classes) {
+      if (cls.examType === 'JEE-Mains' || cls.name === 'JEE-Mains') {
+        const defaultNames = ['Physics', 'Chemistry', 'Mathematics'];
+        for (const sName of defaultNames) {
+          const hasSubj = cls.subjects && cls.subjects.some(s => s && s.name && s.name.toLowerCase() === sName.toLowerCase());
+          if (!hasSubj) {
+            let found = await subjectModel.findOne({ name: { $regex: new RegExp('^\\s*' + sName + '\\s*$', 'i') } });
+            if (!found) {
+              found = await subjectModel.create({ name: sName, status: true, organizationId: orgId || undefined });
+            }
+            if (found) {
+              await classModel.findByIdAndUpdate(cls._id, { $addToSet: { subjects: found._id } });
+              subjectsUpdated = true;
+            }
+          }
+        }
+      } else if (cls.examType === 'NEET' || cls.name === 'NEET') {
+        const defaultNames = ['Physics', 'Chemistry', 'Biology'];
+        for (const sName of defaultNames) {
+          const hasSubj = cls.subjects && cls.subjects.some(s => s && s.name && s.name.toLowerCase() === sName.toLowerCase());
+          if (!hasSubj) {
+            let found = await subjectModel.findOne({ name: { $regex: new RegExp('^\\s*' + sName + '\\s*$', 'i') } });
+            if (!found) {
+              found = await subjectModel.create({ name: sName, status: true, organizationId: orgId || undefined });
+            }
+            if (found) {
+              await classModel.findByIdAndUpdate(cls._id, { $addToSet: { subjects: found._id } });
+              subjectsUpdated = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (subjectsUpdated) {
+      classes = await classModel.find({ organizationId: orgId }).populate('students', 'username email _id').populate('subjects', 'name _id');
+    }
+
     res.json({ success: true, classes: classes });
   } catch(err) {
     console.log(err);

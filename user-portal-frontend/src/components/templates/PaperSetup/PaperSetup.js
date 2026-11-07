@@ -363,6 +363,11 @@ class PaperSetup extends Component {
     if (this.props.targetSubject) {
       formData.append('targetSubject', this.props.targetSubject);
     }
+    const currentSubjectName = this.getSubjectForIndex(this.state.selectedQIndex);
+    if (currentSubjectName) {
+      formData.append('subjectName', currentSubjectName);
+      formData.append('questionIndex', this.state.selectedQIndex);
+    }
     formData.append('body', this.state.body);
     formData.append('option1', this.state.option1);
     formData.append('option2', this.state.option2);

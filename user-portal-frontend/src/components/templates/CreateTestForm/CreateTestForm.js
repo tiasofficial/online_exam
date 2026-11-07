@@ -240,7 +240,7 @@ class CreateTestForm extends React.Component {
       }
 
       this.props.createTestAction({...this.state, subjects: finalSubjects, duration: dur/1000}, (testId) => {
-        this.setState({ createdTestId: testId, setupStep: 1, isSubmitting: false });
+        this.setState({ createdTestId: testId, setupStep: 1, isSubmitting: false, subjects: finalSubjects });
       });
     }
   }
@@ -248,7 +248,8 @@ class CreateTestForm extends React.Component {
   render() {
     if (this.state.setupStep === 1 && this.state.createdTestId) {
       const currentClass = this.props.classesData.find(c => c._id === this.state.targetClass);
-        return <PaperSetup testId={this.state.createdTestId} targetSubject={this.state.subjects[0]} targetClassName={currentClass ? (currentClass.examType || currentClass.name) : null} onFinish={() => this.setState({ setupStep: 2 })} />;
+      const isFixed = currentClass && (currentClass.examType === 'JEE-Mains' || currentClass.examType === 'NEET');
+      return <PaperSetup testId={this.state.createdTestId} targetSubject={isFixed ? null : (this.state.subjects && this.state.subjects[0])} targetClassName={currentClass ? (currentClass.examType || currentClass.name) : null} onFinish={() => this.setState({ setupStep: 2 })} />;
     }
 
     if (this.state.setupStep === 2 && this.state.createdTestId) {
