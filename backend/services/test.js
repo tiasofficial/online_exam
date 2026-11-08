@@ -276,7 +276,18 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   var studentClasses = await classModel.find({ students: creator._id }, { _id: 1 });
   var classIds = studentClasses.map(c => c._id);
 
-  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
+  // Fetch registrations first so we can include assigned tests in the query
+  var registeredList = await testRegistrationModel.find({user:creator._id},{test:1}).catch(err=>{
+    console.log(err);
+    res.json({
+      success : false,
+      message : 'Internal server error'
+    });
+    return;
+  });
+  var registeredTestIds = registeredList ? registeredList.map(reg => reg.test) : [];
+
+  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { _id: { $in: registeredTestIds } }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -286,14 +297,6 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   });
 
   var testlist = new Array(tests.length);
-  var registeredList = await testRegistrationModel.find({user:creator._id},{test:1}).catch(err=>{
-    console.log(err);
-    res.json({
-      success : false,
-      message : 'Internal server error'
-    });
-    return;
-  });
 
 
   for(x in tests) {
@@ -359,7 +362,7 @@ var getUpcomingTestforStudent = async(req,res,next) => {
       { endTime:{$gt:Date.now()} },
       { _id: { $in: reassignedTestIds } }
     ],
-    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }] }]
+    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { _id: { $in: registeredList.map(reg => reg.test) } }] }]
   }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
