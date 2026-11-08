@@ -287,7 +287,7 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   });
   var registeredTestIds = registeredList ? registeredList.map(reg => reg.test) : [];
 
-  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { _id: { $in: registeredTestIds } }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
+  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { regStartTime: null }, { regStartTime: { $exists: false } }, { _id: { $in: registeredTestIds } }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -362,7 +362,7 @@ var getUpcomingTestforStudent = async(req,res,next) => {
       { endTime:{$gt:Date.now()} },
       { _id: { $in: reassignedTestIds } }
     ],
-    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { _id: { $in: registeredList.map(reg => reg.test) } }] }]
+    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { regStartTime: null }, { regStartTime: { $exists: false } }, { _id: { $in: registeredList.map(reg => reg.test) } }] }]
   }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
