@@ -182,11 +182,16 @@ var startTestForStudent = async(req,res,next)=> {
 
         const classModel = require('../models/class');
         if (test.targetClass) {
-          classModel.findById(test.targetClass._id || test.targetClass).then(classObj => {
-            if (!classObj || !classObj.students.includes(creator._id)) {
+          classModel.findById(test.targetClass._id || test.targetClass).then(async classObj => {
+            // Check if student has explicit registration
+            const regExists = await testRegistrationModel.findOne({ user: creator._id, test: test._id });
+            const isEnrolledInClass = classObj && classObj.students && classObj.students.some(s => s.toString() === creator._id.toString());
+            
+            if (isEnrolledInClass || regExists || !test.regStartTime || !classObj) {
+              proceedToTest();
+            } else {
               return res.json({ success: false, message: "You are not enrolled in the class for this test" });
             }
-            proceedToTest();
           });
         } else {
           proceedToTest();
