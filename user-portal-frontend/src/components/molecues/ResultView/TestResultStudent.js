@@ -7,6 +7,7 @@ import { TableCell, TableContainer, Table, TableBody, TableRow, Paper, TableHead
 import TestResultViewQuestions from "./TestResultViewQuestions";
 import { setAlert } from "../../../redux/actions/alertAction";
 import html2pdf from "html2pdf.js";
+import katex from "katex";
 import axios from "axios";
 import apis from "../../../helper/Apis";
 import Auth from "../../../helper/Auth";
@@ -184,6 +185,90 @@ const useStyles = (theme)=> ({
   }
 })
 
+
+const getImageUrl = (path) => {
+  if (!path || path === 'null' || path === 'undefined') return '';
+  if (path.startsWith('http')) return path;
+  return `${apis.BASE}${path}`;
+};
+
+const cleanLatexText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\\text\{\s*%\s*\}/gi, '%')
+    .replace(/\\text\{%\}/gi, '%')
+    .replace(/\\text\{\s*\\%\s*\}/gi, '%')
+    .replace(/-\\text\{([a-zA-Z0-9_]+)\}\$/gi, '-$1')
+    .replace(/-\\text\{([a-zA-Z0-9_]+)\}/gi, '-$1')
+    .replace(/\\text\{([a-zA-Z0-9_\s,]+)\}/gi, '$1')
+    .replace(/\\circC/gi, '°C')
+    .replace(/\^\\circ C/gi, '°C')
+    .replace(/\^\\circ/gi, '°')
+    .replace(/\\cdot([a-zA-Z0-9])/gi, ' · $1')
+    .replace(/\\cdot\b/gi, ' · ')
+    .replace(/\\to\b/gi, '→')
+    .replace(/\\rightarrow\b/gi, '→');
+};
+
+const formatMathToHtml = (rawText) => {
+  if (!rawText) return '';
+  const text = cleanLatexText(rawText);
+
+  const masterRegex = /(<svg[^]+?<\/svg>|\$\$[^]+?\$\$|\$[^]+?\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*.*?\*\*)/gi;
+  const parts = text.split(masterRegex);
+
+  return parts.map(part => {
+    if (!part) return '';
+    if (part.toLowerCase().startsWith('<svg') && part.toLowerCase().endsWith('</svg>')) {
+      return `<div style="display:block; margin: 10px auto; text-align: center; max-width: 100%;">${part}</div>`;
+    }
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return `<strong>${part.slice(2, -2)}</strong>`;
+    }
+    let isMath = false;
+    let mathContent = part;
+    if (part.startsWith('$$') && part.endsWith('$$')) {
+      isMath = true;
+      mathContent = part.slice(2, -2).trim();
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      isMath = true;
+      mathContent = part.slice(1, -1).trim();
+    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+      isMath = true;
+      mathContent = part.slice(2, -2).trim();
+    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+      isMath = true;
+      mathContent = part.slice(2, -2).trim();
+    } else if (part.includes('\\frac') || part.includes('\\sqrt') || part.includes('\\mathrm')) {
+      isMath = true;
+      mathContent = part.replace(/^\\\(|\\\)$/g, '').trim();
+    }
+
+    if (isMath && mathContent) {
+      try {
+        return katex.renderToString(mathContent, { displayMode: false, throwOnError: false });
+      } catch (e) {
+        return part;
+      }
+    }
+    return part.replace(/\n/g, '<br/>');
+  }).join('');
+};
+
+const formatAnsHtml = (ans, q) => {
+  if (Array.isArray(ans)) return ans.map(a => formatAnsHtml(a, q)).join(', ');
+  if (ans == null || ans === '') return "<span style='color:#94a3b8; font-style: italic;'>Not Attempted</span>";
+  let idx = q.options ? q.options.indexOf(ans) : -1;
+  if (idx !== -1 && q.optionImages && q.optionImages[idx] && q.optionImages[idx] !== 'null' && q.optionImages[idx] !== 'undefined') {
+    return `<div style="display:flex; align-items:center; gap: 8px;"><strong>Option ${String.fromCharCode(65 + idx)}</strong> <img src="${getImageUrl(q.optionImages[idx])}" style="max-height: 50px;" /></div>`;
+  }
+  if (typeof ans === 'string' && ans.trim() === '') {
+    if (idx !== -1) return `Option ${String.fromCharCode(65 + idx)}`;
+    return '<span>[Image Option]</span>';
+  }
+  return formatMathToHtml(String(ans));
+};
+
 class TestResultStudent extends React.Component {
   constructor(props){
     super(props);
@@ -211,36 +296,502 @@ class TestResultStudent extends React.Component {
     this.props.getCompletedTestsStudentAction();
   }
 
-  downloadPDF() {
-    if (!this.state.toggleViewQue) {
+  downloadPDF = async () => {
+    const test = this.props.test;
+    const user = this.props.user;
+
+    if (!test) return;
+
+    this.props.setAlert({
+      isAlert: true,
+      type: 'info',
+      title: 'Preparing PDF',
+      message: 'Generating complete result report, please wait...'
+    });
+
+    let questions = test.resultQuestion;
+    if (!questions || questions.length === 0) {
+      try {
+        const res = await axios.post(apis.BASE + apis.GET_RESULT_QUESTIONS_STUDENTS, { queids: test.questions }, {
+          headers: { 'Authorization': `Bearer ${Auth.retriveToken()}` }
+        });
+        if (res.data.success && res.data.questions) {
+          questions = res.data.questions;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (!questions || questions.length === 0) {
       this.props.setAlert({
-        type: 'info',
-        title: 'Please view questions first',
-        message: 'Please click "View Questions" to load the questions layout before downloading the PDF.'
+        isAlert: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Could not fetch test questions for PDF generation.'
       });
       return;
     }
 
-    const element = document.getElementById('pdf-content');
-    const actions = document.getElementById('pdf-actions');
-    
-    // Hide action buttons during PDF generation
-    if (actions) actions.style.display = 'none';
+    let correctCount = 0;
+    let incorrectCount = 0;
+    let unattemptedCount = 0;
 
-    const testTitle = (this.props.test.title || "Result").replace(/\s+/g, '_');
-    const opt = {
-      margin:       10,
-      filename:     `${this.props.user.username}_${testTitle}_Result.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, logging: false },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    questions.forEach((q, index) => {
+      const qType = q.questionType || 'SINGLE';
+      const studentAns = test.answers ? test.answers[index] : null;
+      const isAttempted = studentAns != null && studentAns !== '' && (Array.isArray(studentAns) ? studentAns.length > 0 : true);
 
-    html2pdf().set(opt).from(element).save().then(() => {
-      // Restore action buttons
-      if (actions) actions.style.display = 'flex';
+      if (!isAttempted) {
+        unattemptedCount++;
+      } else {
+        let isCorrect = false;
+        if (qType === 'NUMERICAL') {
+          isCorrect = !isNaN(parseFloat(q.answer)) && !isNaN(parseFloat(studentAns)) && parseFloat(q.answer).toFixed(2) === parseFloat(studentAns).toFixed(2);
+        } else if (qType === 'MULTIPLE') {
+          let actualArr = Array.isArray(q.answer) ? q.answer : (typeof q.answer === 'string' ? q.answer.split(',') : [q.answer]);
+          let userArr = Array.isArray(studentAns) ? studentAns : [studentAns];
+          actualArr = actualArr.map(a => String(a).trim()).sort();
+          userArr = userArr.map(a => String(a).trim()).sort();
+          isCorrect = JSON.stringify(actualArr) === JSON.stringify(userArr);
+        } else {
+          isCorrect = String(q.answer).trim() === String(studentAns).trim();
+        }
+
+        if (isCorrect) correctCount++;
+        else incorrectCount++;
+      }
     });
-  }
+
+    const studentName = user ? (user.username || user.name || 'Student') : 'Student';
+    const studentEmail = user ? (user.email || '') : '';
+    const testTitle = test.title || 'Test Result';
+    const scoreText = `${test.score !== undefined ? test.score : 0} / ${test.maxmarks || 300}`;
+    const rankText = test.rank ? `#${test.rank}` : 'N/A';
+
+    let html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${studentName} - ${testTitle} Result</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background-color: #f8fafc;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+    .no-print-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      margin: -24px -24px 24px -24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-print { background: #22c55e; color: white; }
+    .btn-print:hover { background: #16a34a; }
+    .btn-close { background: #475569; color: white; }
+    .btn-close:hover { background: #334155; }
+    
+    .report-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .report-header {
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .report-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin: 0 0 6px 0;
+    }
+    .student-meta {
+      font-size: 14px;
+      color: #64748b;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+    }
+    .stat-box.success { background: #f0fdf4; border-color: #bbf7d0; }
+    .stat-box.danger { background: #fef2f2; border-color: #fecaca; }
+    .stat-box.primary { background: #eff6ff; border-color: #bfdbfe; }
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .stat-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .stat-box.success .stat-val { color: #16a34a; }
+    .stat-box.danger .stat-val { color: #dc2626; }
+    .stat-box.primary .stat-val { color: #2563eb; }
+
+    .questions-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 28px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .q-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .q-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .q-num {
+      font-weight: 800;
+      font-size: 15px;
+      color: #1e40af;
+    }
+    .badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .badge-correct { background: #dcfce7; color: #15803d; }
+    .badge-wrong { background: #fee2e2; color: #b91c1c; }
+    .badge-unattempted { background: #f1f5f9; color: #64748b; }
+    .badge-easy { background: #dcfce7; color: #166534; }
+    .badge-medium { background: #fef9c3; color: #854d0e; }
+    .badge-hard { background: #fee2e2; color: #991b1b; }
+
+    .q-body {
+      font-size: 15px;
+      color: #1e293b;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .q-img {
+      max-height: 220px;
+      max-width: 100%;
+      display: block;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 600px) {
+      .options-grid { grid-template-columns: 1fr; }
+    }
+    .opt-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .opt-letter {
+      font-weight: 700;
+      color: #3b82f6;
+      min-width: 20px;
+    }
+
+    .ans-compare {
+      display: flex;
+      gap: 16px;
+      background: #f1f5f9;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .ans-part { flex: 1; min-width: 150px; }
+    .ans-part-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .ans-part-val {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .meta-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .explanation-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+    }
+    .explanation-title {
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .no-print-toolbar { display: none !important; }
+      .report-card, .q-card { box-shadow: none; border-color: #cbd5e1; }
+      .q-card { page-break-inside: avoid !important; break-inside: avoid !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-toolbar">
+    <span style="font-size:15px; font-weight:600;">Test Result Document</span>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      <button class="btn btn-close" onclick="window.close()">✕ Close</button>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <div class="report-header">
+      <div>
+        <h1 class="report-title">${testTitle}</h1>
+        <div class="student-meta">Student: <strong>${studentName}</strong> (${studentEmail}) &nbsp;|&nbsp; Date: ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="stat-box primary">
+        <div class="stat-label">Score</div>
+        <div class="stat-val">${scoreText}</div>
+      </div>
+      <div class="stat-box primary">
+        <div class="stat-label">Rank</div>
+        <div class="stat-val">${rankText}</div>
+      </div>
+      <div class="stat-box success">
+        <div class="stat-label">Correct</div>
+        <div class="stat-val">${correctCount}</div>
+      </div>
+      <div class="stat-box danger">
+        <div class="stat-label">Incorrect</div>
+        <div class="stat-val">${incorrectCount}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Unattempted</div>
+        <div class="stat-val">${unattemptedCount}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Questions</div>
+        <div class="stat-val">${questions.length}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="questions-title">Questions & Solutions (${questions.length} Total)</div>
+`;
+
+    questions.forEach((q, index) => {
+      if (!q) return;
+      const qType = q.questionType || 'SINGLE';
+      const studentAns = test.answers ? test.answers[index] : null;
+      const isAttempted = studentAns != null && studentAns !== '' && (Array.isArray(studentAns) ? studentAns.length > 0 : true);
+
+      let isCorrect = false;
+      if (isAttempted) {
+        if (qType === 'NUMERICAL') {
+          isCorrect = !isNaN(parseFloat(q.answer)) && !isNaN(parseFloat(studentAns)) && parseFloat(q.answer).toFixed(2) === parseFloat(studentAns).toFixed(2);
+        } else if (qType === 'MULTIPLE') {
+          let actualArr = Array.isArray(q.answer) ? q.answer : (typeof q.answer === 'string' ? q.answer.split(',') : [q.answer]);
+          let userArr = Array.isArray(studentAns) ? studentAns : [studentAns];
+          actualArr = actualArr.map(a => String(a).trim()).sort();
+          userArr = userArr.map(a => String(a).trim()).sort();
+          isCorrect = JSON.stringify(actualArr) === JSON.stringify(userArr);
+        } else {
+          isCorrect = String(q.answer).trim() === String(studentAns).trim();
+        }
+      }
+
+      let statusBadge = `<span class="badge badge-unattempted">⚪ Not Attempted</span>`;
+      if (isAttempted) {
+        statusBadge = isCorrect 
+          ? `<span class="badge badge-correct">✓ Correct (+${q.marks || 4})</span>` 
+          : `<span class="badge badge-wrong">✗ Incorrect (-1)</span>`;
+      }
+
+      const diff = q.difficulty ? q.difficulty.toUpperCase() : 'MEDIUM';
+      const diffClass = diff === 'HARD' ? 'badge-hard' : (diff === 'EASY' ? 'badge-easy' : 'badge-medium');
+
+      const studentAnsHtml = isAttempted ? formatAnsHtml(studentAns, q) : '<span style="color:#94a3b8; font-style:italic;">Not Attempted</span>';
+      const correctAnsHtml = formatAnsHtml(q.answer, q);
+
+      html += `
+  <div class="q-card">
+    <div class="q-header">
+      <div class="q-num">Question ${index + 1}</div>
+      <div class="badges">
+        <span class="badge ${diffClass}">${diff}</span>
+        ${statusBadge}
+      </div>
+    </div>
+
+    <div class="q-body">${formatMathToHtml(q.body || '')}</div>
+    ${q.bodyImage && q.bodyImage !== 'null' && q.bodyImage !== 'undefined' && String(q.bodyImage).trim() !== '' ? `<img class="q-img" src="${getImageUrl(q.bodyImage)}" alt="Question Diagram" />` : ''}
+
+    ${q.options && q.options.length > 0 ? `
+      <div class="options-grid">
+        ${q.options.map((opt, oIdx) => {
+          let optImgHtml = '';
+          if (q.optionImages && q.optionImages[oIdx] && q.optionImages[oIdx] !== 'null' && q.optionImages[oIdx] !== 'undefined') {
+            optImgHtml = `<img src="${getImageUrl(q.optionImages[oIdx])}" style="max-height: 40px; margin-left: 6px;" />`;
+          }
+          return `<div class="opt-box">
+            <span class="opt-letter">(${String.fromCharCode(65 + oIdx)})</span>
+            <div>${formatMathToHtml(opt || '')} ${optImgHtml}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+
+    <div class="ans-compare">
+      <div class="ans-part">
+        <div class="ans-part-title">Your Answer</div>
+        <div class="ans-part-val" style="color: ${!isAttempted ? '#64748b' : (isCorrect ? '#16a34a' : '#dc2626')};">${studentAnsHtml}</div>
+      </div>
+      <div class="ans-part">
+        <div class="ans-part-title">Correct Answer</div>
+        <div class="ans-part-val" style="color: #16a34a;">${correctAnsHtml}</div>
+      </div>
+    </div>
+
+    ${((q.explanation && q.explanation.trim() !== '') || (q.explanationImage && q.explanationImage !== 'null' && q.explanationImage !== 'undefined')) ? `
+      <div class="explanation-box">
+        <div class="explanation-title">Explanation / Solution</div>
+        <div>${formatMathToHtml(q.explanation || '')}</div>
+        ${q.explanationImage && q.explanationImage !== 'null' && q.explanationImage !== 'undefined' && String(q.explanationImage).trim() !== '' ? `<img class="q-img" style="max-height: 140px;" src="${getImageUrl(q.explanationImage)}" alt="Solution Diagram" />` : ''}
+      </div>
+    ` : ''}
+
+    <div class="meta-footer">
+      <span>Time Spent: <strong>${test.timeSpent && test.timeSpent[index] != null ? parseFloat(test.timeSpent[index]).toFixed(1) : 0}s</strong></span>
+      <span>Revisits: <strong>${test.revisitCounts && test.revisitCounts[index] != null ? test.revisitCounts[index] : 0}</strong></span>
+    </div>
+  </div>`;
+    });
+
+    html += `
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 700);
+    };
+  </script>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } else {
+      let iframe = document.getElementById('print-result-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-result-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+      }
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 800);
+    }
+  };
 
   render() {
     var test = this.props.test;
