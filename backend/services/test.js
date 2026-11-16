@@ -287,7 +287,14 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
   });
   var registeredTestIds = registeredList ? registeredList.map(reg => reg.test) : [];
 
-  var tests = await testModel.find({ organizationId: creator.organizationId, $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { regStartTime: null }, { regStartTime: { $exists: false } }, { _id: { $in: registeredTestIds } }] }).populate('targetClass').sort({startTime:1}).catch(err=>{
+  var tests = await testModel.find({ 
+    organizationId: creator.organizationId, 
+    $or: [
+      { _id: { $in: registeredTestIds } },
+      { targetClass: { $in: classIds } }, 
+      { targetClass: null }
+    ] 
+  }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
       success : false,
@@ -296,17 +303,41 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
     return;
   });
 
-  var testlist = new Array(tests.length);
+  if (!tests) return;
 
+  var candidateTestIds = tests.map(t => t._id);
+  var testsWithAnyRegistrations = await testRegistrationModel.distinct('test', { test: { $in: candidateTestIds } });
+  var testsWithAnyRegSet = new Set(testsWithAnyRegistrations.map(id => id.toString()));
 
-  for(x in tests) {
+  var testlist = [];
+
+  for(let x = 0; x < tests.length; x++) {
     var correctStatus = getTestStatus(tests[x]);
     if (correctStatus !== tests[x].status) {
       updateStatus(tests[x],correctStatus);
       tests[x].status = correctStatus;
     }
-    var isReg = registeredList.find((test,index)=>(test.test.toString() == tests[x]._id.toString()));
-    testlist[x] = {
+    var testIdStr = tests[x]._id.toString();
+    var hasAnyAssignments = testsWithAnyRegSet.has(testIdStr);
+    var isReg = registeredList.find((test,index)=>(test.test.toString() == testIdStr));
+
+    if (hasAnyAssignments) {
+      // If the test has explicit student assignments, unassigned students must NOT see it
+      if (!isReg) {
+        continue;
+      }
+    } else {
+      // No explicit assignments yet: verify class enrollment if targetClass is set
+      if (tests[x].targetClass) {
+        var targetClassIdStr = (tests[x].targetClass._id || tests[x].targetClass).toString();
+        var isEnrolled = classIds.some(cId => cId.toString() === targetClassIdStr);
+        if (!isEnrolled) {
+          continue;
+        }
+      }
+    }
+
+    testlist.push({
       _id : tests[x]._id,
       title : tests[x].title,
       status : tests[x].status,
@@ -319,15 +350,13 @@ var getAllTestWithStudentRegisterCheck = async(req,res,next) => {
       maxmarks : tests[x].maxmarks,
       duration : tests[x].duration,
       targetClass: tests[x].targetClass
-    };
+    });
   }
 
-  
   res.json({
     success : true,
     testlist : testlist
   })
-  
 }
 
 var getUpcomingTestforStudent = async(req,res,next) => {
@@ -352,6 +381,9 @@ var getUpcomingTestforStudent = async(req,res,next) => {
     return;
   });
 
+  if (!registeredList) return;
+
+  var registeredTestIds = registeredList.map(reg => reg.test);
   var reassignedTestIds = registeredList
     .filter(reg => reg.reassignEndTime && new Date(reg.reassignEndTime).getTime() > Date.now())
     .map(reg => reg.test);
@@ -362,7 +394,13 @@ var getUpcomingTestforStudent = async(req,res,next) => {
       { endTime:{$gt:Date.now()} },
       { _id: { $in: reassignedTestIds } }
     ],
-    $and: [{ $or: [{ targetClass: { $in: classIds } }, { targetClass: null }, { regStartTime: null }, { regStartTime: { $exists: false } }, { _id: { $in: registeredList.map(reg => reg.test) } }] }]
+    $and: [{ 
+      $or: [
+        { _id: { $in: registeredTestIds } },
+        { targetClass: { $in: classIds } }, 
+        { targetClass: null }
+      ] 
+    }]
   }).populate('targetClass').sort({startTime:1}).catch(err=>{
     console.log(err);
     res.json({
@@ -372,39 +410,63 @@ var getUpcomingTestforStudent = async(req,res,next) => {
     return;
   });
 
+  if (!tests) return;
+
+  var candidateTestIds = tests.map(t => t._id);
+  var testsWithAnyRegistrations = await testRegistrationModel.distinct('test', { test: { $in: candidateTestIds } });
+  var testsWithAnyRegSet = new Set(testsWithAnyRegistrations.map(id => id.toString()));
+
   var testlist = [];
 
-  for(x in tests) {
+  for(let x = 0; x < tests.length; x++) {
     var correctStatus = getTestStatus(tests[x]);
     if (correctStatus !== tests[x].status) {
       updateStatus(tests[x],correctStatus);
       tests[x].status = correctStatus;
     }
-    var regEntry = registeredList.find((test,index)=>(test.test.toString() == tests[x]._id.toString()));
-    if(regEntry || !tests[x].regStartTime) {
-      testlist.push({
-        _id : tests[x]._id,
-        title : tests[x].title,
-        status : tests[x].status,
-        startTime : tests[x].startTime,
-        endTime : regEntry && regEntry.reassignEndTime && new Date(regEntry.reassignEndTime).getTime() > Date.now() ? regEntry.reassignEndTime : tests[x].endTime,
-        resultTime : tests[x].resultTime,
-        maxmarks : tests[x].maxmarks,
-        duration : tests[x].duration,
-        targetClass: tests[x].targetClass
-      });
+    var testIdStr = tests[x]._id.toString();
+    var hasAnyAssignments = testsWithAnyRegSet.has(testIdStr);
+    var regEntry = registeredList.find((test,index)=>(test.test.toString() == testIdStr));
+
+    if (hasAnyAssignments) {
+      // Test has explicit student assignments: unassigned students must NOT see it
+      if (!regEntry) {
+        continue;
+      }
+    } else {
+      // No explicit assignments yet
+      if (tests[x].targetClass) {
+        var targetClassIdStr = (tests[x].targetClass._id || tests[x].targetClass).toString();
+        var isEnrolled = classIds.some(cId => cId.toString() === targetClassIdStr);
+        if (!isEnrolled) {
+          continue;
+        }
+      }
+      if (tests[x].regStartTime && !regEntry) {
+        continue;
+      }
     }
+
+    testlist.push({
+      _id : tests[x]._id,
+      title : tests[x].title,
+      status : tests[x].status,
+      startTime : tests[x].startTime,
+      endTime : regEntry && regEntry.reassignEndTime && new Date(regEntry.reassignEndTime).getTime() > Date.now() ? regEntry.reassignEndTime : tests[x].endTime,
+      resultTime : tests[x].resultTime,
+      maxmarks : tests[x].maxmarks,
+      duration : tests[x].duration,
+      targetClass: tests[x].targetClass
+    });
   }
 
-  
   res.json({
     success : true,
     upcomingtestlist : testlist
   })
-  
 }
 
-var getTestDetailsFromId = (req,res,next) => {
+var getTestDetailsFromId = async (req,res,next) => {
   var creator = req.user || null;
   if(creator == null) {
     res.status(401).json({
@@ -426,8 +488,8 @@ var getTestDetailsFromId = (req,res,next) => {
     return;
   }
 
-  testModel.findById({_id:req.body.testid})
-  .then(test => {
+  try {
+    const test = await testModel.findById(req.body.testid);
     if(test) {
       var correctStatus = getTestStatus(test);
       if(correctStatus !== test.status) {
@@ -435,50 +497,51 @@ var getTestDetailsFromId = (req,res,next) => {
         test.status = correctStatus;
       }
       if(req.user.usertype == 'STUDENT') {
-        // Check if this student has an active reassign window
-        testRegistrationModel.findOne({ test: test._id, user: creator._id }).then(reg => {
-          var effectiveStatus = test.status;
-          var effectiveEndTime = test.endTime;
-          if (reg && reg.reassignEndTime && new Date(reg.reassignEndTime).getTime() > Date.now()) {
-            // Student is within their reassigned time window - let them take the test
-            effectiveStatus = 'TEST_STARTED';
-            effectiveEndTime = reg.reassignEndTime;
+        const hasAnyAssignments = await testRegistrationModel.exists({ test: test._id });
+        const reg = await testRegistrationModel.findOne({ test: test._id, user: creator._id });
+
+        if (hasAnyAssignments) {
+          if (!reg) {
+            return res.json({
+              success: false,
+              message: "You are not assigned to this test"
+            });
           }
-          res.json({
-            success : true,
-            test : {
-              _id : test._id,
-              title : test.title,
-              status : effectiveStatus,
-              startTime : test.startTime,
-              endTime : effectiveEndTime,
-              regStartTime : test.regStartTime,
-              regEndTime : test.regEndTime,
-              resultTime : test.resultTime,
-              maxmarks : test.maxmarks,
-              duration : test.duration
-            }
-          });
-        }).catch(err => {
-          console.log(err);
-          res.json({
-            success : true,
-            test : {
-              _id : test._id,
-              title : test.title,
-              status : test.status,
-              startTime : test.startTime,
-              endTime : test.endTime,
-              regStartTime : test.regStartTime,
-              regEndTime : test.regEndTime,
-              resultTime : test.resultTime,
-              maxmarks : test.maxmarks,
-              duration : test.duration
-            }
-          });
+        } else if (test.targetClass) {
+          const classObj = await classModel.findById(test.targetClass._id || test.targetClass);
+          const isEnrolled = classObj && classObj.students && classObj.students.some(s => s.toString() === creator._id.toString());
+          if (!isEnrolled) {
+            return res.json({
+              success: false,
+              message: "You are not enrolled in the class for this test"
+            });
+          }
+        }
+
+        var effectiveStatus = test.status;
+        var effectiveEndTime = test.endTime;
+        if (reg && reg.reassignEndTime && new Date(reg.reassignEndTime).getTime() > Date.now()) {
+          // Student is within their reassigned time window - let them take the test
+          effectiveStatus = 'TEST_STARTED';
+          effectiveEndTime = reg.reassignEndTime;
+        }
+        return res.json({
+          success : true,
+          test : {
+            _id : test._id,
+            title : test.title,
+            status : effectiveStatus,
+            startTime : test.startTime,
+            endTime : effectiveEndTime,
+            regStartTime : test.regStartTime,
+            regEndTime : test.regEndTime,
+            resultTime : test.resultTime,
+            maxmarks : test.maxmarks,
+            duration : test.duration
+          }
         });
       } else {
-        res.json({
+        return res.json({
           success : true,
           test : {
             _id : test._id,
@@ -494,25 +557,21 @@ var getTestDetailsFromId = (req,res,next) => {
             subjects : test.subjects,
             queTypes : test.queTypes
           }
-        })
+        });
       }
     } else {
-      res.json({
+      return res.json({
         success : false,
         message : 'test id not found'
-      })
+      });
     }
-  })
-  .catch(err=>{
+  } catch(err) {
     console.log(err);
-    res.json({
+    return res.json({
       success : false,
       message : 'Internal server error'
     });
-    return;
-  });
-
-  
+  }
 }
 
 
@@ -699,69 +758,64 @@ var getAssignedStudents = async (req, res, next) => {
     // 2. Get any answersheets (students who started or completed)
     const answersheets = await answersheetModel.find({ test: testid }).populate('student');
 
-    // 3. Get students from target class if assigned
-    let classStudents = [];
-    if (test.targetClass) {
-      classStudents = await userModel.find({ targetClass: test.targetClass, usertype: 'STUDENT' });
-    }
-
-    // 4. Get organization students if registrations and class are empty
-    let orgStudents = [];
-    if (registrations.length === 0 && answersheets.length === 0 && classStudents.length === 0) {
-      const orgQuery = { usertype: 'STUDENT' };
-      if (req.user.organizationId) {
-        orgQuery.organizationId = req.user.organizationId;
-      }
-      orgStudents = await userModel.find(orgQuery);
-    }
-
-    // Combine all unique students
     const studentMap = new Map();
 
-    // Add registrations
-    registrations.forEach(reg => {
-      if (reg.user && reg.user._id) {
-        studentMap.set(reg.user._id.toString(), {
-          user: reg.user,
-          reassignEndTime: reg.reassignEndTime || null
-        });
-      }
-    });
-
-    // Add answersheets
-    answersheets.forEach(sheet => {
-      if (sheet.student && sheet.student._id) {
-        const id = sheet.student._id.toString();
-        if (!studentMap.has(id)) {
-          studentMap.set(id, {
-            user: sheet.student,
-            reassignEndTime: null
+    if (registrations.length > 0) {
+      // Explicit assignments exist: ONLY include registered students (and any existing answersheets)
+      registrations.forEach(reg => {
+        if (reg.user && reg.user._id) {
+          studentMap.set(reg.user._id.toString(), {
+            user: reg.user,
+            reassignEndTime: reg.reassignEndTime || null
           });
         }
+      });
+      answersheets.forEach(sheet => {
+        if (sheet.student && sheet.student._id) {
+          const id = sheet.student._id.toString();
+          if (!studentMap.has(id)) {
+            studentMap.set(id, {
+              user: sheet.student,
+              reassignEndTime: null
+            });
+          }
+        }
+      });
+    } else {
+      // No explicit assignments yet: fallback to target class students, or org students
+      let classStudents = [];
+      if (test.targetClass) {
+        const cls = await classModel.findById(test.targetClass).populate('students');
+        if (cls && cls.students) {
+          classStudents = cls.students;
+        }
       }
-    });
 
-    // Add class students
-    classStudents.forEach(st => {
-      const id = st._id.toString();
-      if (!studentMap.has(id)) {
-        studentMap.set(id, {
-          user: st,
-          reassignEndTime: null
+      if (classStudents.length > 0) {
+        classStudents.forEach(st => {
+          if (st && st._id) {
+            studentMap.set(st._id.toString(), {
+              user: st,
+              reassignEndTime: null
+            });
+          }
+        });
+      } else {
+        const orgQuery = { usertype: 'STUDENT' };
+        if (req.user.organizationId) {
+          orgQuery.organizationId = req.user.organizationId;
+        }
+        const orgStudents = await userModel.find(orgQuery);
+        orgStudents.forEach(st => {
+          if (st && st._id) {
+            studentMap.set(st._id.toString(), {
+              user: st,
+              reassignEndTime: null
+            });
+          }
         });
       }
-    });
-
-    // Add org students
-    orgStudents.forEach(st => {
-      const id = st._id.toString();
-      if (!studentMap.has(id)) {
-        studentMap.set(id, {
-          user: st,
-          reassignEndTime: null
-        });
-      }
-    });
+    }
 
     const studentsData = await Promise.all(Array.from(studentMap.values()).map(async (item) => {
       const u = item.user;

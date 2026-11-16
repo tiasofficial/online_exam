@@ -180,27 +180,35 @@ var startTestForStudent = async(req,res,next)=> {
 
         if(test.status === 'TEST_STARTED' || hasReassignedTime) {
 
-        const classModel = require('../models/class');
-        if (test.targetClass) {
-          classModel.findById(test.targetClass._id || test.targetClass).then(async classObj => {
-            // Check if student has explicit registration
-            const regExists = await testRegistrationModel.findOne({ user: creator._id, test: test._id });
+          const hasAnyAssignments = await testRegistrationModel.exists({ test: test._id });
+          const userReg = await testRegistrationModel.findOne({ user: creator._id, test: test._id });
+
+          if (hasAnyAssignments) {
+            // Test has explicit student assignments: student MUST be assigned
+            if (!userReg) {
+              return res.json({ success: false, message: "You are not assigned to this test" });
+            }
+            proceedToTest();
+          } else if (test.targetClass) {
+            // No explicit assignments: student must be enrolled in target class
+            const classObj = await classModel.findById(test.targetClass._id || test.targetClass);
             const isEnrolledInClass = classObj && classObj.students && classObj.students.some(s => s.toString() === creator._id.toString());
-            
-            if (isEnrolledInClass || regExists || !test.regStartTime || !classObj) {
+            if (isEnrolledInClass) {
+              if (test.regStartTime && !userReg) {
+                return res.json({ success: false, message: "You are not registered for this test" });
+              }
               proceedToTest();
             } else {
               return res.json({ success: false, message: "You are not enrolled in the class for this test" });
             }
-          });
-        } else {
-          proceedToTest();
-        }
+          } else {
+            if (test.regStartTime && !userReg) {
+              return res.json({ success: false, message: "You are not registered for this test" });
+            }
+            proceedToTest();
+          }
 
-        function proceedToTest() {
-        testRegistrationModel.find({user:creator._id,test:req.body.testid})
-        .then(testRegFind =>{
-          if(testRegFind.length > 0 || !test.regStartTime) {
+          function proceedToTest() {
             answersheetModel.find({student:creator._id,test:req.body.testid})
             .then(answersheets => {
               if(answersheets.length > 0) {
@@ -254,22 +262,14 @@ var startTestForStudent = async(req,res,next)=> {
                 })
               }
             })
-            
-          } else {
-            res.json({
-              success : false,
-              message : "You are not registered"
+            .catch(err=>{
+              console.log(err);
+              res.json({
+                success : false,
+                message : "Unable to start test"
+              })
             })
           }
-        })
-        .catch(err=>{
-          console.log(err);
-          res.json({
-            success : false,
-            message : "Unable to start test"
-          })
-        })
-        }
       } else if(test.status === 'TEST_COMPLETE') {
         res.json({
           success : false,
