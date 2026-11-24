@@ -743,7 +743,10 @@ var getAssignedStudents = async (req, res, next) => {
     return res.status(401).json({ success: false, message: "Permissions not granted!" });
   }
   try {
-    const testid = req.body.testid;
+    const testid = req.body.testid || req.body.testId;
+    if (!testid) {
+      return res.status(400).json({ success: false, message: "Test ID is required" });
+    }
     const test = await testModel.findById(testid);
     if (!test) {
       return res.status(404).json({ success: false, message: "Test not found" });
@@ -817,23 +820,30 @@ var getAssignedStudents = async (req, res, next) => {
       }
     }
 
-    const studentsData = await Promise.all(Array.from(studentMap.values()).map(async (item) => {
+    const answersheetMap = new Map();
+    answersheets.forEach(a => {
+      if (a.student && a.student._id) {
+        answersheetMap.set(a.student._id.toString(), a);
+      }
+    });
+
+    const studentsData = Array.from(studentMap.values()).map((item) => {
       const u = item.user;
-      const sheet = answersheets.find(a => a.student && a.student._id && a.student._id.toString() === u._id.toString()) 
-                 || await answersheetModel.findOne({ test: testid, student: u._id });
+      if (!u || !u._id) return null;
+      const sheet = answersheetMap.get(u._id.toString());
       return {
         id: u._id,
         name: u.username || u.name || "Student",
-        email: u.email,
+        email: u.email || "",
         completed: sheet ? sheet.completed : false,
         started: sheet ? !!sheet.startTime : false,
         score: sheet ? (sheet.score !== undefined ? sheet.score : 0) : 0,
         reassignEndTime: item.reassignEndTime || null
       };
-    }));
+    }).filter(Boolean);
 
     const studentIds = Array.from(studentMap.keys());
-    res.json({ success: true, studentsData: studentsData.filter(Boolean), studentIds: studentIds });
+    res.json({ success: true, studentsData: studentsData, studentIds: studentIds });
   } catch(err) {
     console.log(err);
     res.status(500).json({ success: false, message: "Error fetching assigned students" });

@@ -191,23 +191,28 @@ const getTestResultsForTeacher = async (req, res, next) => {
     return res.status(401).json({ success: false, message: "Permissions not granted!" });
   }
   
-  const testid = req.body.testid;
+  const testid = req.body.testid || req.body.testId;
   try {
     const answersheets = await answersheetModel.find({ test: testid, completed: true }).populate('student', 'username email');
     const test = await testModel.findById(testid).populate('targetClass');
     
     // Sort answersheets by score descending
-    answersheets.sort((a, b) => b.score - a.score);
+    answersheets.sort((a, b) => (b.score || 0) - (a.score || 0));
     
     let rankedResults = answersheets.map((sheet, index) => ({
       _id: sheet._id,
-      studentName: sheet.student.username,
-      studentEmail: sheet.student.email,
-      score: sheet.score,
+      studentName: sheet.student ? sheet.student.username : 'Unknown',
+      studentEmail: sheet.student ? sheet.student.email : '',
+      score: sheet.score || 0,
       rank: index + 1
     }));
     
-    res.json({ success: true, results: rankedResults, testTitle: test.title, targetClass: test.targetClass ? test.targetClass.name : 'All Classes' });
+    res.json({ 
+      success: true, 
+      results: rankedResults, 
+      testTitle: test ? test.title : '', 
+      targetClass: (test && test.targetClass) ? test.targetClass.name : 'All Classes' 
+    });
   } catch(err) {
     console.log(err);
     res.status(500).json({ success: false, message: 'Internal server error' });

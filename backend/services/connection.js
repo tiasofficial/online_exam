@@ -9,8 +9,7 @@ let options = {
   autoIndex: false, 
   reconnectTries: 100,
   reconnectInterval: 500, 
-  poolSize: 10, 
-  bufferMaxEntries: 0,
+  poolSize: 50, 
   useNewUrlParser: true,
   useFindAndModify :  false
 };
